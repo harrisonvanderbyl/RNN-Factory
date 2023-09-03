@@ -132,7 +132,7 @@ DEBUG_DEBUG = False  # True False --> show softmax output
 print(f'\nUsing {args.RUN_DEVICE.upper()}. Loading {MODEL_NAME}...')
 from src.model import RWKV
 
-model = RWKV(args, True)
+model = RWKV(args)
 model = model.eval()
 model = model.requires_grad_(False)
 
