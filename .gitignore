@@ -1,4 +1,4 @@
 *.pth
-./wandb/
-./out/
+./wandb/**
+./out/**
 **/__pycache__
