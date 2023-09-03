@@ -1,4 +1,5 @@
 *.pth
-./wandb/**
+**/wandb
 ./out/**
 **/__pycache__
+train_log.txt
