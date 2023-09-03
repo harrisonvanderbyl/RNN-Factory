@@ -13,16 +13,6 @@ if importlib.util.find_spec('deepspeed'):
 
 # from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
 
-
-
-
-########################################################################################################
-# CUDA Kernel
-########################################################################################################
-
-
-########################################################################################################
-
 ########################################################################################################
 # RWKV: RWKV Time-mix + RWKV Channel-mix
 ########################################################################################################
@@ -54,9 +44,9 @@ class Block(nn.Module):
         self.ffn = Feed_Forward(args, layer_id)
    
     def forward(self, x):
-        x = self.ln1(x + self.att(x))
-        x = self.ln2(x + self.longmem(x))
-        x = self.ln3(x + self.ffn(x))   
+        x1 = self.ln1(x*2 + self.att(x))
+        x2 = self.ln2(x1+x + self.longmem(x))
+        x = self.ln3(x2+x+x1 + self.ffn(x))   
         return x
 
 
