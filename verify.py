@@ -41,7 +41,7 @@ os.environ["RWKV_JIT_ON"] = "1"
 os.environ["RWKV_T_MAX"] = str(ctx_len)
 
 from src.model_run import RWKV_RNN
-from src.model import RWKV
+from src.models.experimental.model import RWKV
 
 args = types.SimpleNamespace()
 args.vocab_size = tokenizer.vocab_size
