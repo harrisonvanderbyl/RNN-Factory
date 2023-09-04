@@ -67,8 +67,8 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_begin", default=0, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
-    parser.add_argument("--micro_bsz", default=8, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=12, type=int)
+    parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
+    parser.add_argument("--n_layer", default=6, type=int)
     parser.add_argument("--n_embd", default=512, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
     parser.add_argument("--dim_ffn", default=0, type=int)
@@ -301,12 +301,9 @@ if __name__ == "__main__":
     train_data = MyDataset(args)
     args.vocab_size = train_data.vocab_size
 
-    if args.data_type == 'wds_img':
-        from src.model_img import RWKV_IMG
-        model = RWKV_IMG(args)
-    else:
-        from src.model import RWKV
-        model = RWKV(args)
+    
+    from src.models.rwkv5.model import RWKV
+    model = RWKV(args)
 
     if len(args.load_model) == 0 or args.my_pile_stage == 1:  # shall we build the initial weights?
         init_weight_name = f"{args.proj_dir}/rwkv-init.pth"

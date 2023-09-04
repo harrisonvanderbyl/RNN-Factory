@@ -43,7 +43,7 @@ class Block(nn.Module):
         self.ln6 = nn.LayerNorm(args.n_embd)
         self.ln7 = nn.LayerNorm(args.n_embd)
         
-        from .RWKVTools.RNN import Short_Mem, Long_Mem, Feed_Forward
+        from ...RWKVTools.RNN import Short_Mem, Long_Mem, Feed_Forward
         self.att = Short_Mem(args, 2**(layer_id%12))
         # self.att2 = Short_Mem(args, 2**((layer_id)%10))
         # self.att3 = Short_Mem(args, 2**((layer_id)%8))
@@ -85,7 +85,7 @@ class Block(nn.Module):
 
 
 
-from .RWKVTools.RNN import LightningModel
+from ...RWKVTools.RNN import LightningModel
 
 
 class RWKV(LightningModel):
@@ -181,5 +181,81 @@ class RWKV(LightningModel):
 
         
     
+    def generate_init_weight(self):
+            print(
+                f"""
+    ############################################################################
+    #
+    # Init model weight (slow for large models)...
+    #
+    ############################################################################
+    """
+            )
+            m = {}
+            for n in self.state_dict():
+                p = self.state_dict()[n]
+                shape = p.shape
+
+                gain = 1.0
+                scale = 1.0
+                if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n or '.mask.' in n or "model.1." in n or "model.3." in n or "model._orig_mod.1" in n or "model._orig_mod.3" in n:
+                    if 'ln_x.weight' in n:
+                        try:
+                            m = (1+int(n.split('.')[1]))
+                            layer_scale = (1+int(n.split('.')[2])) / self.args.n_layer
+                            m[n] = (p * 0.0) + (layer_scale ** 0.7)
+                        except:
+                            layer_scale = (1+int(n.split('.')[3])) / self.args.n_layer
+                            m[n] = (p * 0.0) + (layer_scale ** 0.7)
+                    else:
+                        m[n] = p
+                else:
+                    if "model.0." in n or "model._orig_mod.0" in n:
+                        scale = 1 
+                    else:
+                        if shape[0] > shape[1]:
+                            gain = math.sqrt(shape[0] / shape[1])
+                        if 'r' in os.environ["RWKV_MY_TESTING"]:
+                            zero = [".att.output.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q.", '.oo.', '.rr.']
+                        else:
+                            zero = [".att.key.", ".att.receptance.", ".att.output.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q.", '.oo.', '.rr.']
+                        for kk in zero:
+                            if kk in n:
+                                scale = 0
+                        if n == "head.weight":
+                            scale = 0.5
+                        if "head_k." in n:
+                            scale = 0.1
+                        if "head_q." in n:
+                            scale = 0
+
+                    print(f"{str(shape[0]).ljust(5)} {str(shape[1]).ljust(5)} {str(scale).ljust(4)} {n}")
+
+                    if self.args.accelerator.upper() == "GPU":
+                        m[n] = torch.empty((shape[0], shape[1]), device="cuda")
+                    else:
+                        m[n] = torch.empty((shape[0], shape[1]))
+
+                    if scale == 0:
+                        nn.init.zeros_(m[n])
+                    elif scale < 0:
+                        nn.init.uniform_(m[n], a=scale, b=-scale)
+                    else:
+                        nn.init.orthogonal_(m[n], gain=gain * scale)
+
+                m[n] = m[n].cpu()
+                if os.environ["RWKV_FLOAT_MODE"] == "fp16":
+                    m[n] = m[n].half()
+                elif os.environ["RWKV_FLOAT_MODE"] == "bf16":
+                    m[n] = m[n].bfloat16()
+
+                # if n == "emb.weight":
+                #     print(m[n])
+
+            gc.collect()
+            torch.cuda.empty_cache()
+            return m
+
+
 
     

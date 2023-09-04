@@ -21,7 +21,7 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Desktop/RWKV-LM/RWKV-v4neo/out/rwkv-5.pth'
+MODEL_NAME = '/home/harrison/Desktop/RWKV-LM/RWKV-v4neo/out/rwkv-20.pth'
 
 args.load_model = MODEL_NAME
 
