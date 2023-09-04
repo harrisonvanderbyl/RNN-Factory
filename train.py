@@ -115,8 +115,15 @@ if __name__ == "__main__":
     parser.add_argument("--my_testing", default='', type=str)
     parser.add_argument("--my_exit", default=99999999, type=int)
     parser.add_argument("--my_exit_tokens", default=0, type=int)
-
-    parser = Trainer.add_argparse_args(parser)
+    
+    # accelerator, devices, precision, strategy
+    parser.add_argument("--accelerator", default="gpu", type=str)  # cpu / gpu / ddp / ddp_find_unused_parameters_false
+    parser.add_argument("--devices", default=1, type=int)  # number of GPUs
+    parser.add_argument("--precision", default="bf16", type=str)  # fp32 / tf32 / fp16 / bf16
+    parser.add_argument("--strategy", default="ddp_find_unused_parameters_false", type=str)  # ddp / ddp_find_unused_parameters_false / deepspeed_stage_1 / deepspeed_stage_2 / deepspeed_stage_2_offload / deepspeed_stage_3 / deepspeed_stage_3_offload
+    
+    #num nodes
+    parser.add_argument("--num_nodes", default=1, type=int)  # number of nodes
     args = parser.parse_args()
 
     ########################################################################################################
@@ -302,7 +309,7 @@ if __name__ == "__main__":
     args.vocab_size = train_data.vocab_size
 
     
-    from src.models.rwkv5.model import RWKV
+    from src.model import RWKV
     model = RWKV(args)
 
     if len(args.load_model) == 0 or args.my_pile_stage == 1:  # shall we build the initial weights?
@@ -337,8 +344,7 @@ if __name__ == "__main__":
                 load_dict[k] = model.state_dict()[k]
     
 
-    trainer = Trainer.from_argparse_args(
-        args,
+    trainer = Trainer(
         callbacks=[train_callback(args)],
     )
 
