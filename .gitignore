@@ -3,3 +3,4 @@
 ./out/**
 **/__pycache__
 train_log.txt
+lightning_logs

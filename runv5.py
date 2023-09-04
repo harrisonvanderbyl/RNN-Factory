@@ -21,7 +21,7 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Desktop/RWKV-LM/RWKV-v4neo/out/rwkv-20.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/rwkv-5.pth'
 
 args.load_model = MODEL_NAME
 
@@ -41,7 +41,7 @@ DEBUG_DEBUG = False  # True False --> show softmax output
 
 ########################################################################################################
 
-from src.models.rwkv5.model import RWKV
+from src.model import RWKV
 
 model = RWKV(args)
 model = model.eval()

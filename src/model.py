@@ -41,7 +41,8 @@ class Block(nn.Module):
         self.ln1 = nn.LayerNorm(args.n_embd)
         self.ln2 = nn.LayerNorm(args.n_embd)
         
-        from ...RWKVTools.RNN import Short_Mem, Long_Mem, Feed_Forward
+        from RWKVTools.modules.LongMem import Long_Mem
+        from RWKVTools.modules.FFN import Feed_Forward
         self.att = Long_Mem(args, layer_id)
         self.ffn = Feed_Forward(args, layer_id)
 
@@ -57,7 +58,7 @@ class Block(nn.Module):
 
 
 
-from ...RWKVTools.RNN import LightningModel
+from .RWKVTools.RNN import LightningModel
 
 
 class RWKV(LightningModel):
@@ -152,6 +153,8 @@ class RWKV(LightningModel):
         if len(idx.shape) == 1:
             idx = idx.unsqueeze(0)
             idx = idx.repeat(self.batches, 1)
+
+
         args = self.args
         idx = idx.to(self.device)
 
@@ -198,19 +201,12 @@ class RWKV(LightningModel):
                     if shape[0] > shape[1]:
                         import math
                         gain = math.sqrt(shape[0] / shape[1])
-                    if 'r' in os.environ["RWKV_MY_TESTING"]:
-                        zero = [".att.output.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q.", '.oo.', '.rr.']
-                    else:
-                        zero = [".att.key.", ".att.receptance.", ".att.output.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q.", '.oo.', '.rr.']
+                    zero = [".att.output.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q.", '.oo.', '.rr.']
                     for kk in zero:
                         if kk in n:
                             scale = 0
                     if n == "head.weight":
                         scale = 0.5
-                    if "head_k." in n:
-                        scale = 0.1
-                    if "head_q." in n:
-                        scale = 0
 
                 print(f"{str(shape[0]).ljust(5)} {str(shape[1]).ljust(5)} {str(scale).ljust(4)} {n}")
 
