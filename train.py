@@ -117,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--my_exit_tokens", default=0, type=int)
     
     # accelerator, devices, precision, strategy
-    parser.add_argument("--accelerator", default="gpu", type=str)  # cpu / gpu / ddp / ddp_find_unused_parameters_false
+    parser.add_argument("--accelerator", default="auto", type=str)  # cpu / gpu / ddp / ddp_find_unused_parameters_false
     parser.add_argument("--devices", default=1, type=int)  # number of GPUs
     parser.add_argument("--precision", default="bf16", type=str)  # fp32 / tf32 / fp16 / bf16
     parser.add_argument("--strategy", default="ddp_find_unused_parameters_false", type=str)  # ddp / ddp_find_unused_parameters_false / deepspeed_stage_1 / deepspeed_stage_2 / deepspeed_stage_2_offload / deepspeed_stage_3 / deepspeed_stage_3_offload
@@ -346,6 +346,10 @@ if __name__ == "__main__":
 
     trainer = Trainer(
         callbacks=[train_callback(args)],
+        precision=args.precision,
+        strategy=args.strategy,
+        accelerator=args.accelerator,
+        devices=args.devices,
     )
 
     if trainer.global_rank == 0:
