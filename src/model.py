@@ -41,8 +41,8 @@ class Block(nn.Module):
         self.ln1 = nn.LayerNorm(args.n_embd)
         self.ln2 = nn.LayerNorm(args.n_embd)
         
-        from RWKVTools.modules.LongMem import Long_Mem
-        from RWKVTools.modules.FFN import Feed_Forward
+        from .RWKVTools.modules.LongMem import Long_Mem
+        from .RWKVTools.modules.FFN import Feed_Forward
         self.att = Long_Mem(args, layer_id)
         self.ffn = Feed_Forward(args, layer_id)
 
