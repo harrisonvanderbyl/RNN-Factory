@@ -60,7 +60,7 @@ class TOKENIZER():
         else:
             top_p = top_p_usual
 
-        if os.environ["RWKV_RUN_DEVICE"] == "cpu":
+        if probs.device == "cpu":
             probs = probs.numpy()
             sorted_probs = np.sort(probs)[::-1]
             cumulative_probs = np.cumsum(sorted_probs)

@@ -35,57 +35,29 @@ class Block(nn.Module):
         self.layer_id = layer_id
         self.lastlayer = args.n_layer-1
 
+        if layer_id == 0:
+            self.ln0 = nn.LayerNorm(args.n_embd)
+
         self.ln1 = nn.LayerNorm(args.n_embd)
         self.ln2 = nn.LayerNorm(args.n_embd)
-        self.ln3 = nn.LayerNorm(args.n_embd)
-        self.ln4 = nn.LayerNorm(args.n_embd)
-        self.ln5 = nn.LayerNorm(args.n_embd)
-        self.ln6 = nn.LayerNorm(args.n_embd)
-        self.ln7 = nn.LayerNorm(args.n_embd)
         
-        from .RWKVTools.RNN import Short_Mem, Long_Mem, Feed_Forward
-        self.att = Short_Mem(args, 2**(layer_id%12))
-        # self.att2 = Short_Mem(args, 2**((layer_id)%10))
-        # self.att3 = Short_Mem(args, 2**((layer_id)%8))
-        # self.att4 = Short_Mem(args, 2**((layer_id)%6))
-        # self.att5 = Short_Mem(args, 2**((layer_id)%4))
-        # self.att6 = Short_Mem(args, 2**((layer_id)%2))
-        # self.att7 = Short_Mem(args, 2**((layer_id)%1))
-        self.longmem = Long_Mem(args, layer_id)
-        # self.ffn = Feed_Forward(args, layer_id)
-
-        # self.time_mix_a = nn.Parameter(torch.ones(args.n_embd))
-        # self.time_mix_b = nn.Parameter(torch.ones(args.n_embd))
-        # self.time_mix_c = nn.Parameter(torch.ones(args.n_embd))
+        from ...RWKVTools.RNN import Short_Mem, Long_Mem, Feed_Forward
+        self.att = Long_Mem(args, layer_id)
+        self.ffn = Feed_Forward(args, layer_id)
 
    
     def forward(self, x):
-        # if self.layer_id > 0:
-        #     x, xstack = x
-        # else:
-        #     xstack = torch.zeros_like(x)
-        # xstack = xstack*2 + x
-        # x = xstack + x
+
+        if self.layer_id == 0:
+            x = self.ln0(x)
 
         x = self.att(self.ln1(x)) + x
-        # x = self.att2(self.ln2(x)) + x
-        # x = self.att3(self.ln3(x)) + x
-        # x = self.att4(self.ln4(x)) + x
-        # x = self.att5(self.ln5(x)) + x
-        # x = self.att6(self.ln6(x)) + x
-        # x = self.att7(self.ln7(x)) + x
-        
-        
-        x = self.longmem(self.ln2(x)) + x
-        # x = self.ffn(self.ln3(x)) + x
-
-        # if self.layer_id < self.lastlayer:
-        #     return x, xstack
+        x = self.ffn(self.ln2(x)) + x
         return x
 
 
 
-from .RWKVTools.RNN import LightningModel
+from ...RWKVTools.RNN import LightningModel
 
 
 class RWKV(LightningModel):
@@ -101,6 +73,12 @@ class RWKV(LightningModel):
             args.grad_cp
         except:
             args.grad_cp = 0
+
+        try:
+            args.ctx_len
+        except:
+            args.ctx_len = 1024
+
         try:
             modelpath = args.load_model
 
@@ -126,35 +104,38 @@ class RWKV(LightningModel):
             vocab_size, n_embd = file[keys[0]].shape
             args.n_embd = n_embd
             args.vocab_size = vocab_size
+            args.dim_ffn = file["blocks.0.ffn.value.weight"].shape[1]
             # model layers are model.2.x.yyy: find highest x
             n_layer = 0
             for key in keys:
-                if key.startswith("model.2."):
-                    layer = int(key.split(".")[2])
+                if key.startswith("blocks."):
+                    layer = int(key.split(".")[1])
                     if layer > n_layer:
                         n_layer = layer
             args.n_layer = n_layer + 1
         else:
             file = None
 
-        
+        try:
+            args.dim_ffn
+        except:
+            args.dim_ffn = 4 * args.n_embd
+
         self.args = args
 
 
 
-        emb = nn.Embedding(args.vocab_size, args.n_embd)
-        ln_in = nn.LayerNorm(args.n_embd)
-        blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
-        ln_out = nn.LayerNorm(args.n_embd)
-        head = nn.Linear(args.n_embd, args.vocab_size, bias=False)
+        self.emb = nn.Embedding(args.vocab_size, args.n_embd)
+        
+        self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
+        self.ln_out = nn.LayerNorm(args.n_embd)
+        self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False)
 
-        self.model = nn.Sequential(emb, ln_in, blocks, ln_out, head)
         
         if file:
             self.load_state_dict(file)
 
-        # self.model = torch.compile(self.model)  
-        # 
+       
 
 
     
@@ -174,10 +155,15 @@ class RWKV(LightningModel):
         args = self.args
         idx = idx.to(self.device)
 
+        
+        x = self.emb(idx)
         if args.grad_cp == 1:
-            return deepspeed.checkpointing.checkpoint(self.model, idx)
+            return deepspeed.checkpointing.checkpoint(self.blocks, x)
         else:
-            return self.model(idx)
+            x = self.blocks(x)
+        x = self.ln_out(x)
+        x = self.head(x)
+        return x
 
         
     

@@ -11,6 +11,10 @@ if importlib.util.find_spec('deepspeed'):
     import deepspeed
     from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 
+method = torch.jit.script_method
+method = lambda x: x
+module = torch.jit.ScriptModule
+module = nn.Module
 
 class Model(nn.Module):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -219,15 +223,20 @@ try:
 
                 gain = 1.0
                 scale = 1.0
-                if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n or '.mask.' in n or "model.1" in n or "model.3" in n:
+                if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n or '.mask.' in n or "model.1." in n or "model.3." in n or "model._orig_mod.1" in n or "model._orig_mod.3" in n:
                     if 'ln_x.weight' in n:
-                        layer_scale = (1+int(n.split('.')[1])) / self.args.n_layer
-                        m[n] = (p * 0.0) + (layer_scale ** 0.7)
+                        try:
+                            m = (1+int(n.split('.')[1]))
+                            layer_scale = (1+int(n.split('.')[2])) / self.args.n_layer
+                            m[n] = (p * 0.0) + (layer_scale ** 0.7)
+                        except:
+                            layer_scale = (1+int(n.split('.')[3])) / self.args.n_layer
+                            m[n] = (p * 0.0) + (layer_scale ** 0.7)
                     else:
                         m[n] = p
                 else:
-                    if n == "model.0.weight":
-                        scale = -1 * self.args.lr_init
+                    if "model.0." in n or "model._orig_mod.0" in n:
+                        scale = 1 
                     else:
                         if shape[0] > shape[1]:
                             gain = math.sqrt(shape[0] / shape[1])
@@ -277,18 +286,20 @@ except:
 import torch
 
 
-class TimeShift(nn.Module):
+class TimeShift(module):
     def __init__(self, dims, shiftAmount=1, batch=1 , *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.state = torch.zeros(batch,shiftAmount, dims)
         self.shift = shiftAmount
+    
+    @method
     def forward(self, x):
         tokens = x.shape[-2]
         xapp = torch.cat([self.state.to(x.device, x.dtype), x], dim=-2)
         if self.training:
             pass
         else:
-            self.state = xapp[:,-self.shift:,:]
+            self.state = xapp[:,-self.shift:,:].clone()
         return xapp[:,:tokens,:]
     
     def setState(self, state):
@@ -299,21 +310,22 @@ class TimeShift(nn.Module):
 
 
 # Short Memory
-class Short_Mem(nn.Module):
-    def __init__(self, args):
+class Short_Mem(module):
+    def __init__(self, args, shiftAmount=1):
         super().__init__()
-        self.time_shift1 = TimeShift(args.n_embd, shiftAmount=1, batch=args.micro_bsz)
+        self.time_shift1 = TimeShift(args.n_embd, shiftAmount=shiftAmount, batch=args.micro_bsz)
         self.activation = nn.Sequential(
             nn.Linear(args.n_embd*2, args.n_embd, bias=False),
             nn.ReLU(),
         )
 
+    @method
     def forward(self, x):
         xv = self.activation(torch.cat([self.time_shift1(x),x], dim=-1))
         return  xv
 
 # RWKV5 attention 
-class Long_Mem(nn.Module):
+class Long_Mem(module):
     def __init__(self, args, layer_id):
         super().__init__()
         self.args = args
@@ -367,7 +379,7 @@ class Long_Mem(nn.Module):
 
         self.state = torch.zeros(args.micro_bsz, self.n_head, self.head_size, self.head_size, dtype=torch.float32)
 
-    
+    @method
     def jit_func(self, x):
         B, TT, C = x.size()
 
@@ -384,7 +396,7 @@ class Long_Mem(nn.Module):
 
         return r, k, v, g
 
-    
+    @method
     def jit_func_2(self, r, k, v, g, w, wk, wb, ws, state):
         B, H, TT, S = r.size()
         T = min(self.chunk_len, TT)
@@ -407,7 +419,7 @@ class Long_Mem(nn.Module):
         x = self.ln_x(x / self.head_size_divisor).view(B, TT, H*S) * g
         return self.output(x), s
 
-    
+    @method
     def forward(self, x):
         H = self.n_head
         T = min(self.chunk_len, x.shape[-2])
@@ -452,7 +464,7 @@ class Long_Mem(nn.Module):
         return self.state.clone()
 
 # FFN
-class Feed_Forward(nn.Module):
+class Feed_Forward(module):
     def __init__(self, args, layer_id):
         super().__init__()
         self.args = args
@@ -467,10 +479,11 @@ class Feed_Forward(nn.Module):
             self.time_mix_k = nn.Parameter(torch.pow(ddd, ratio_1_to_almost0))
             self.time_mix_r = nn.Parameter(torch.pow(ddd, ratio_1_to_almost0))
         
-        self.key = nn.Linear(args.n_embd,args.n_embd, bias=False)
+        self.key = nn.Linear(args.n_embd,args.dim_ffn, bias=False)
         self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
-        self.value = nn.Linear(args.n_embd, args.n_embd, bias=False)
+        self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
 
+    @method
     def forward(self, x):
         xx = self.time_shift(x)
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
