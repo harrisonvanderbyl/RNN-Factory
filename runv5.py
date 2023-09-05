@@ -21,7 +21,7 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/rwkv-5.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-35.pth'
 
 args.load_model = MODEL_NAME
 
@@ -46,7 +46,12 @@ from src.model import RWKV
 model = RWKV(args)
 model = model.eval()
 model = model.requires_grad_(False)
-# model = model.cuda()
+# model = model.half()
+model = model.cuda()
+
+# get model memory use
+print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
+
 # model = model.half()
 
 print(f'\nOptimizing speed...')

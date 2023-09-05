@@ -1,17 +1,15 @@
 import torch
 from torch import nn
 
+from .StateModule import StateModule
+
 from .TimeShift import TimeShift
 
 from torch.nn import functional as F
 
 # RWKV5 attention 
-class Long_Mem(nn.Module):
+class Long_Mem(StateModule):
     def __init__(self, args, layer_id):
-        super().__init__()
-        self.args = args
-        self.layer_id = layer_id
-
         try :
             dimatt = args.dim_att
         except:
@@ -20,6 +18,11 @@ class Long_Mem(nn.Module):
 
         self.head_size = 64
         self.n_head = args.dim_att // self.head_size
+        super().__init__(args.micro_bsz, self.n_head, self.head_size, self.head_size)
+        self.args = args
+        self.layer_id = layer_id
+
+        
         assert args.dim_att % self.n_head == 0
         self.head_size_divisor = 8
 
@@ -58,7 +61,6 @@ class Long_Mem(nn.Module):
 
         self.ln_x = nn.GroupNorm(self.n_head, args.dim_att)
 
-        self.state = torch.zeros(args.micro_bsz, self.n_head, self.head_size, self.head_size, dtype=torch.float32)
 
     def jit_func(self, x):
         B, TT, C = x.size()
@@ -131,12 +133,7 @@ class Long_Mem(nn.Module):
         wb = wb.to(dtype=r.dtype)
         ws = ws.to(dtype=r.dtype)
         out, state = self.jit_func_2(r, k, v, g, w, wk, wb, ws, self.state.to(dtype=r.dtype, device=r.device))
-        if not self.training:
-            self.setState(state)
+        self.setState(state)
         return out
 
-    def setState(self, state):
-        self.state = state.clone()
-
-    def getState(self):
-        return self.state.clone()
+  

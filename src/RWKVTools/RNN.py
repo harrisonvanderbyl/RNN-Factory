@@ -48,6 +48,16 @@ class Model(nn.Module):
     def getState(self):
         return self.recursiveGetState(self)
     
+    def recursiveResetState(self,m):
+        for name, child in m.named_children():
+            if hasattr(child, 'resetState'):
+                child.resetState()
+            
+            self.recursiveResetState(child)
+
+    def resetState(self):
+        self.recursiveResetState(self)
+
     def state_forward(self, *args, state=None, returnState=False, allLogits=False, **kwargs):
         if state is not None:
             self.recursiveSetState(self, state)
@@ -157,6 +167,7 @@ try:
             else:
                 if self.deepspeed_offload:
                     return DeepSpeedCPUAdam(optim_groups, lr=self.args.lr_init, betas=self.args.betas, eps=self.args.adam_eps, bias_correction=True, adamw_mode=False, weight_decay=0, amsgrad=False)
+                
                 return FusedAdam(optim_groups, lr=self.args.lr_init, betas=self.args.betas, eps=self.args.adam_eps, bias_correction=True, adam_w_mode=False, weight_decay=0, amsgrad=False)
             # return ZeroOneAdam(optim_groups, lr=self.args.lr_init, betas=self.args.betas, eps=self.args.adam_eps, bias_correction=True, weight_decay=0, amsgrad=False, cuda_aware=False)
 
@@ -164,6 +175,7 @@ try:
             args = self.args
             if args.my_qa_mask != 1:
                 idx, targets = batch
+                self.resetState()
                 logits = self(idx)
                 loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
                 # if '0' in os.environ["RWKV_MY_TESTING"]:
@@ -177,7 +189,7 @@ try:
                 sum_mask = torch.sum(mask).item()
                 # if sum_mask == 0:
                 #     return torch.tensor([0.0], requires_grad=True)
-
+                
                 logits = self(idx)
                 if sum_mask == mask.shape[0]:
                     loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
