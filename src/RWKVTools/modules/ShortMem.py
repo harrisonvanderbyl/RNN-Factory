@@ -4,11 +4,14 @@ import torch
 from torch import nn
 
 class Short_Mem(nn.Module):
-    def __init__(self, args, shiftAmount=1):
+    def __init__(self, args, shiftAmount=1, layer=1):
         super().__init__()
-        self.time_shift1 = TimeShift(args.n_embd, shiftAmount=shiftAmount, batch=args.micro_bsz)
+        self.args = args
+        self.layer = layer
+        self.time_shift1 = TimeShift(args.n_embd*layer, shiftAmount=shiftAmount, batch=args.micro_bsz)
+        print(args.n_embd*(1+layer))
         self.activation = nn.Sequential(
-            nn.Linear(args.n_embd*2, args.n_embd, bias=False),
+            nn.Linear(args.n_embd*(2*self.layer), args.n_embd, bias=False),
             nn.ReLU(),
         )
         
