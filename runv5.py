@@ -21,13 +21,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-35.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-75.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context = "\nIn a shocking finding, scientist discovered a herd of dragons living in a remote, previously unexplored valley, in"
+context = "The Dragon of Marbelberry is a"
 
 
 NUM_TRIALS = 999
@@ -47,7 +47,7 @@ model = RWKV(args)
 model = model.eval()
 model = model.requires_grad_(False)
 # model = model.half()
-model = model.cuda()
+# model = model.cuda()
 
 # get model memory use
 print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")

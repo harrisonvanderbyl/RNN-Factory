@@ -1,10 +1,14 @@
 ########################################################################################################
 # The RWKV Language Model - https://github.com/BlinkDL/RWKV-LM
 ########################################################################################################
-
+import os
 import logging
+import torch
 logging.basicConfig(level=logging.INFO)
+torch.backends.cuda.matmul.allow_tf32 = True
 
+# The flag below controls whether to allow TF32 on cuDNN. This flag defaults to True.
+torch.backends.cudnn.allow_tf32 = True
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from pytorch_lightning import Trainer
@@ -52,7 +56,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
 
-    parser.add_argument("--load_model", default="", type=str)  # full path, with .pth
+    parser.add_argument("--load_model", default="/home/harrison/Documents/RNN-Factory/out/rwkv-75.pth", type=str)  # full path, with .pth
     parser.add_argument("--wandb", default="rwkv-xres", type=str)  # wandb project name. if "" then don't use wandb
     parser.add_argument("--proj_dir", default="out", type=str)
     parser.add_argument("--random_seed", default="-1", type=int)
@@ -61,13 +65,13 @@ if __name__ == "__main__":
     parser.add_argument("--data_type", default="numpy", type=str)
     parser.add_argument("--vocab_size", default=50277, type=int)  # vocab_size = 0 means auto (for char-level LM and .txt data)
 
-    parser.add_argument("--ctx_len", default=2048, type=int)
+    parser.add_argument("--ctx_len", default=512, type=int)
     parser.add_argument("--epoch_steps", default=1000, type=int)  # a mini "epoch" has [epoch_steps] steps tf32/ 7.5 fp16 / 9.0
     parser.add_argument("--epoch_count", default=500, type=int)  # train for this many "epochs". will continue afterwards with lr = lr_final
-    parser.add_argument("--epoch_begin", default=0, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
+    parser.add_argument("--epoch_begin", default=75, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
-    parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
+    parser.add_argument("--micro_bsz", default=8, type=int)  # micro batch size (batch size per GPU)
     parser.add_argument("--n_layer", default=12, type=int)
     parser.add_argument("--n_embd", default=256, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
@@ -316,7 +320,7 @@ if __name__ == "__main__":
         init_weight_name = f"{args.proj_dir}/rwkv-init.pth"
         generate_init_weight(model, init_weight_name)  # save initial weights
         args.load_model = init_weight_name
-
+    model = model
     rank_zero_info(f"########## Loading {args.load_model}... ##########")
     try:
         load_dict = torch.load(args.load_model, map_location="cpu")
@@ -346,7 +350,7 @@ if __name__ == "__main__":
 
     trainer = Trainer(
         callbacks=[train_callback(args)],
-        precision=args.precision,
+        precision="bf16-mixed",
         strategy=args.strategy,
         accelerator=args.accelerator,
         devices=args.devices,

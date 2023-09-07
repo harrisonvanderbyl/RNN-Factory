@@ -175,6 +175,7 @@ try:
             args = self.args
             if args.my_qa_mask != 1:
                 idx, targets = batch
+                # Omit if infctx training
                 self.resetState()
                 logits = self(idx)
                 loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
