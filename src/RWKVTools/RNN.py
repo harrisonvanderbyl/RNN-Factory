@@ -173,7 +173,7 @@ try:
 
         def training_step(self, batch, batch_idx):
             args = self.args
-            if args.my_qa_mask != 1:
+            if len(batch) == 2:
                 idx, targets = batch
                 self.resetState()
                 logits = self(idx)

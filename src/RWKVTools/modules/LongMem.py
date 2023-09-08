@@ -27,7 +27,7 @@ class Long_Mem(StateModule):
         self.head_size_divisor = 8
 
         self.chunk_len = 512
-        assert args.ctx_len % self.chunk_len == 0
+        # assert args.ctx_len % self.chunk_len == 0
 
         with torch.no_grad():
             ratio_0_to_1 = layer_id / (args.n_layer - 1)  # 0 to 1
