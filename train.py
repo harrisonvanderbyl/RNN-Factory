@@ -311,6 +311,8 @@ if __name__ == "__main__":
     
     from src.model import RWKV
     model = RWKV(args)
+    if args.precision == 32:
+        model = model.float()
 
     if len(args.load_model) == 0 or args.my_pile_stage == 1:  # shall we build the initial weights?
         init_weight_name = f"{args.proj_dir}/rwkv-init.pth"
