@@ -23,15 +23,16 @@ class RandomMemory(Dataset):
         world_size = self.world_size
         # print(f"epoch {epoch} idx {idx} rank {rank}/{world_size}")
 
-        ctx_len = random.randint(32, args.ctx_len//2)*2
+        ctx_len = args.ctx_len#random.randint(32, args.ctx_len//2)*2
 
         # create ctx_len//2 random integers in [0, vocab_size)
-        dix = [random.randint(1, self.vocab_size - 1) for _ in range(ctx_len // 2)]
-        # double the list
-        dix = dix + dix
+        splits = [2,4,8,16,32,64,128][random.randint(0,6)]
+        splits = 2
+        splitctx = (ctx_len//2) // splits
+        dix = [[random.randint(1, self.vocab_size - 1) for _ in range(splitctx)]*2 for _ in range(splits)]
 
-        x = torch.tensor(dix[:-1], dtype=torch.long)
-        y = torch.tensor(dix[1:], dtype=torch.long)
-        z = torch.tensor((ctx_len//2)*[0]+(ctx_len//2 - 1)*[1], dtype=torch.bfloat16)
+        x = torch.tensor(dix[:-1], dtype=torch.long).flatten()
+        y = torch.tensor(dix[1:], dtype=torch.long).flatten()
+        # z = torch.tensor((ctx_len//2)*[0]+(ctx_len//2 - 1)*[1], dtype=torch.bfloat16)
 
-        return x, y, z
+        return x, y

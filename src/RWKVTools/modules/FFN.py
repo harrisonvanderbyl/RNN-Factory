@@ -19,9 +19,9 @@ class Feed_Forward(nn.Module):
             self.time_mix_k = nn.Parameter(torch.pow(ddd, ratio_1_to_almost0))
             self.time_mix_r = nn.Parameter(torch.pow(ddd, ratio_1_to_almost0))
         
-        self.key = nn.Linear(args.n_embd,args.dim_ffn, bias=False)
-        self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
-        self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
+        self.key = nn.Linear(args.n_embd,args.dim_ffn, bias=False, dtype=torch.bfloat16)
+        self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False, dtype=torch.bfloat16)
+        self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False, dtype=torch.bfloat16)
 
     
     def forward(self, x):

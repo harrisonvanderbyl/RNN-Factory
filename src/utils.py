@@ -73,7 +73,7 @@ class TOKENIZER():
             return out
         else:
             sorted_probs = torch.sort(probs, descending=True)[0]
-            cumulative_probs = torch.cumsum(sorted_probs, dim=-1).cpu().numpy()
+            cumulative_probs = torch.cumsum(sorted_probs.float(), dim=-1).cpu().numpy()
             cutoff = float(sorted_probs[np.argmax(cumulative_probs > top_p)])
             probs[probs < cutoff] = 0
             if temperature != 1.0:

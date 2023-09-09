@@ -87,7 +87,7 @@ class RWKV(LightningModel):
             modelpath = None
         
         if modelpath:
-            file = torch.load(modelpath, map_location="cpu")
+            file = torch.load(modelpath, map_location="cuda")
             keys = list(file.keys())
             print("keys", keys)
             # remove _orig_mod from keys for compatibility with torch.compile
@@ -130,7 +130,7 @@ class RWKV(LightningModel):
         
         self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
         self.ln_out = nn.LayerNorm(args.n_embd)
-        self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False)
+        self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
 
         
         if file:

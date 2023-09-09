@@ -42,7 +42,7 @@ class Long_Mem(StateModule):
             self.time_mix_r = nn.Parameter(torch.pow(ddd, 0.5 * ratio_1_to_almost0))
 
             self.time_mix_g = nn.Parameter(torch.pow(ddd, 0.5 * ratio_1_to_almost0))
-            self.gate = nn.Linear(args.n_embd, args.dim_att, bias=False)
+            self.gate = nn.Linear(args.n_embd, args.dim_att, bias=False, dtype=torch.bfloat16)
 
             # fancy time_decay
             decay_speed = torch.ones(self.n_head)
@@ -54,10 +54,10 @@ class Long_Mem(StateModule):
             self.time_faaaa = nn.Parameter(torch.ones(self.n_head) * 0.05)
 
         self.time_shift = TimeShift(args.n_embd, shiftAmount=1, batch=args.micro_bsz)
-        self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False)
-        self.key = nn.Linear(args.n_embd, args.dim_att, bias=False)
-        self.value = nn.Linear(args.n_embd, args.dim_att, bias=False)
-        self.output = nn.Linear(args.dim_att, args.n_embd, bias=False)
+        self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False, dtype=torch.bfloat16)
+        self.key = nn.Linear(args.n_embd, args.dim_att, bias=False, dtype=torch.bfloat16)
+        self.value = nn.Linear(args.n_embd, args.dim_att, bias=False, dtype=torch.bfloat16)
+        self.output = nn.Linear(args.dim_att, args.n_embd, bias=False, dtype=torch.bfloat16)
 
         self.ln_x = nn.GroupNorm(self.n_head, args.dim_att)
 
