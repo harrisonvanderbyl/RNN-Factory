@@ -40,11 +40,21 @@ class Block(nn.Module):
 
         self.ln1 = nn.LayerNorm(args.n_embd)
         self.ln2 = nn.LayerNorm(args.n_embd)
+        self.ln3 = nn.LayerNorm(args.n_embd)
+        self.ln4 = nn.LayerNorm(args.n_embd)
         
         from .RWKVTools.modules.LongMem import Long_Mem
         from .RWKVTools.modules.FFN import Feed_Forward
-        self.att = Long_Mem(args, layer_id)
+        from .RWKVTools.modules.ShortMem import Short_Mem
+        from .RWKVTools.modules.RotaryMemory import MatForward
+        # self.att = Short_Mem(args, 1)
+        
+        
+        self.mem = MatForward(args, layer_id)
         self.ffn = Feed_Forward(args, layer_id)
+        self.att = Long_Mem(args, layer_id)
+        self.short = Short_Mem(args, 1)
+
 
    
     def forward(self, x):
@@ -52,8 +62,10 @@ class Block(nn.Module):
         if self.layer_id == 0:
             x = self.ln0(x)
 
-        x = self.att(self.ln1(x)) + x
-        x = self.ffn(self.ln2(x)) + x
+        x = self.mem(self.ln1(x)) + x
+        x = self.att(self.ln2(x)) + x
+        x = self.short(self.ln3(x)) + x
+        x = self.ffn(self.ln4(x)) + x
         return x
 
 
@@ -105,7 +117,7 @@ class RWKV(LightningModel):
             vocab_size, n_embd = file[keys[0]].shape
             args.n_embd = n_embd
             args.vocab_size = vocab_size
-            args.dim_ffn = file["blocks.0.ffn.value.weight"].shape[1]
+            args.dim_ffn = file["blocks.0.ffn.key.weight"].shape[0]
             # model layers are model.2.x.yyy: find highest x
             n_layer = 0
             for key in keys:
@@ -127,7 +139,7 @@ class RWKV(LightningModel):
 
 
         self.emb = nn.Embedding(args.vocab_size, args.n_embd)
-        
+   
         self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
         self.ln_out = nn.LayerNorm(args.n_embd)
         self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
@@ -136,10 +148,10 @@ class RWKV(LightningModel):
         if file:
             self.load_state_dict(file)
 
-       
 
 
-    
+
+
 
     def forward(self, idx):
         # if idx is list, make tensor

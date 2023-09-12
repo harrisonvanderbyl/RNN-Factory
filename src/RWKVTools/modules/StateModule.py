@@ -10,9 +10,14 @@ class StateModule(nn.Module):
 
     def setState(self, state):
         if not self.training:
-            self.state = state.clone().detach()
+            if state is None:
+                self.state = None
+            else:
+                self.state = state.clone().detach()
 
     def getState(self):
+        if self.state is None:
+            return None
         return self.state.clone()
     
     def resetState(self):

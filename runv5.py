@@ -21,13 +21,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-35.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-15.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context = "\nIn a shocking finding, scientist discovered a herd of dragons living in a remote, previously unexplored valley, in"
+context = "==An example of c++ code==\n"
 
 
 NUM_TRIALS = 999
@@ -46,6 +46,7 @@ from src.model import RWKV
 model = RWKV(args)
 model = model.eval()
 model = model.requires_grad_(False)
+model = model.float()
 # model = model.half()
 model = model.cuda()
 
@@ -58,10 +59,26 @@ print(f'\nOptimizing speed...')
 model.forward([187])
 
 
+
+
 print(f'\nLoading tokenizer {WORD_NAME}...')
 tokenizer = TOKENIZER(WORD_NAME, UNKNOWN_CHAR=UNKNOWN_CHAR)
 if TOKEN_MODE == "pile":
     assert tokenizer.tokenizer.decode([187]) == '\n'
+
+testdata = "The Cute RNN model:"
+testdata = tokenizer.tokenizer.encode(testdata)
+
+model.resetState()
+atonce = model.forward(testdata, allLogits=True)
+print(f'At once:', atonce.shape)
+model.resetState()
+for i in range(len(testdata)):
+    atatime = model.forward(testdata[i:i+1])
+    error = torch.max(torch.abs(atonce[0,i] - atatime)).item()
+    # 3 decimal places
+    error = int(error * 1000)
+    print(f'[{i}]', error / 1000, 'max error')
 
 ########################################################################################################
 
