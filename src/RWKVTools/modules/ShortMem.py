@@ -9,7 +9,7 @@ class Short_Mem(nn.Module):
         self.time_shift1 = TimeShift(args.n_embd, shiftAmount=shiftAmount, batch=args.micro_bsz)
         self.activation = nn.Sequential(
             nn.Linear(args.n_embd*2, args.n_embd, bias=False),
-            nn.ReLU(),
+            nn.Sigmoid(),
         )
         
     def forward(self, x):

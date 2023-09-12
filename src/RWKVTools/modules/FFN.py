@@ -32,3 +32,10 @@ class Feed_Forward(nn.Module):
         k = torch.relu(k) ** 2
         kv = self.value(k)
         return torch.sigmoid(self.receptance(xr)) * kv
+    
+# Wavenet ffn
+class WNFFN(Feed_Forward):
+    def __init__(self, args, layer_id):
+        super().__init__(args, layer_id)
+        self.time_shift = TimeShift(args.n_embd, shiftAmount=2**(layer_id%12), batch=args.micro_bsz)
+    

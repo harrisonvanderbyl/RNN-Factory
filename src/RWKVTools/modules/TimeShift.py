@@ -11,7 +11,7 @@ class TimeShift(StateModule):
     
     def forward(self, x):
         tokens = x.shape[-2]
-        xapp = torch.cat([self.state.to(x.device, x.dtype), x], dim=-2)
+        xapp = torch.cat([self.getState().to(x.device, x.dtype), x], dim=-2)
         self.setState(xapp[:,-self.shift:,:])
         return xapp[:,:tokens,:]
     
