@@ -45,15 +45,13 @@ class Block(nn.Module):
         
         from .RWKVTools.modules.LongMem import Long_Mem
         from .RWKVTools.modules.FFN import Feed_Forward
-        from .RWKVTools.modules.ShortMem import Short_Mem
+        from .RWKVTools.modules.ShortMem import WaveNet_Mem
         from .RWKVTools.modules.RotaryMemory import MatForward
-        # self.att = Short_Mem(args, 1)
-        
         
         self.mem = MatForward(args, layer_id)
         self.ffn = Feed_Forward(args, layer_id)
         self.att = Long_Mem(args, layer_id)
-        self.short = Short_Mem(args, 1)
+        self.short = WaveNet_Mem(args, layer_id, undialated=True)
 
 
    
