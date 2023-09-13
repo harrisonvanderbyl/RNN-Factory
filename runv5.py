@@ -21,13 +21,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-15.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-20.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context = "==An example of c++ code==\n"
+context = "\nInstruction: What is a nueral network\nOutput:"
 
 
 NUM_TRIALS = 999
