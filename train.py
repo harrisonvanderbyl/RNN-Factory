@@ -52,12 +52,12 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
 
-    parser.add_argument("--load_model", default="/home/harrison/Documents/RNN-Factory/out/preinstruct.pth", type=str)  # full path, with .pth
+    parser.add_argument("--load_model", default="", type=str)  # full path, with .pth
     parser.add_argument("--wandb", default="rwkv-xres", type=str)  # wandb project name. if "" then don't use wandb
     parser.add_argument("--proj_dir", default="out", type=str)
     parser.add_argument("--random_seed", default="-1", type=int)
 
-    parser.add_argument("--data_file", default="./instruct_data.npy", type=str)
+    parser.add_argument("--data_file", default="./enwik8.npy", type=str)
     parser.add_argument("--data_type", default="numpy", type=str)
     parser.add_argument("--vocab_size", default=50277, type=int)  # vocab_size = 0 means auto (for char-level LM and .txt data)
 
