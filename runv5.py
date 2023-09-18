@@ -21,13 +21,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-0.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-30.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context = "\nInstruction: What is a computer\nOutput:"
+context = 'Rainbows are'
 
 
 NUM_TRIALS = 999
@@ -48,7 +48,7 @@ model = model.eval()
 model = model.requires_grad_(False)
 model = model.float()
 # model = model.half()
-model = model.cuda()
+# model = model.cuda()
 
 # get model memory use
 print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
@@ -56,7 +56,7 @@ print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
 # model = model.half()
 
 print(f'\nOptimizing speed...')
-model.forward([187])
+# model.forward([187])
 
 
 
@@ -111,13 +111,14 @@ state = None
 out = None
 
 for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
+    
     print(("-" * 50) + '\n' + context, end="")
 
     time_ref = time.time_ns()
     ctx = src_ctx.copy()
 
     if TRIAL == 0:
-        init_out, init_state = model.forward(ctx, returnState=True)
+        
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -128,13 +129,15 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
         x = x[-1:]
 
         if i == src_len:
-            out = init_out.clone()
-            model.setState(init_state)
-        out = model.forward(x)
+            model.resetState()
+
+            out = model.forward(ctx)
+        else:
+            out = model.forward(x)
         if DEBUG_DEBUG:
             print("model", np.array(x), "==>", np.array(out), np.max(out.cpu().numpy()), np.min(out.cpu().numpy()))
-        if TOKEN_MODE == "pile":
-            out[0] = 0  # disable <|endoftext|>
+        # if TOKEN_MODE == "pile":
+        out[0] = -99  # disable <|endoftext|>
   
         ttt = tokenizer.sample_logits(
             out,

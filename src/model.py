@@ -38,17 +38,15 @@ class Block(nn.Module):
         if layer_id == 0:
             self.ln0 = nn.LayerNorm(args.n_embd)
 
-        # self.ln1 = nn.LayerNorm(args.n_embd)
+        self.ln1 = nn.LayerNorm(args.n_embd)
         self.ln2 = nn.LayerNorm(args.n_embd)
-        self.ln3 = nn.LayerNorm(args.n_embd)
-        self.ln4 = nn.LayerNorm(args.n_embd)
         
         from .RWKVTools.modules.LongMem import Long_Mem
         from .RWKVTools.modules.FFN import Feed_Forward
         from .RWKVTools.modules.ShortMem import WaveNet_Mem
         from .RWKVTools.modules.RotaryMemory import MatForward
         
-        self.mem = MatForward(args, layer_id)
+        # self.mem = MatForward(args, layer_id)
         self.ffn = Feed_Forward(args, layer_id)
         self.att = Long_Mem(args, layer_id)
 
@@ -57,10 +55,10 @@ class Block(nn.Module):
 
         if self.layer_id == 0:
             x = self.ln0(x)
-        x = self.att(self.ln2(x)) + x
+        x = self.att(self.ln1(x)) + x
         
-        x = self.mem(self.ln3(x)) + x
-        x = self.ffn(self.ln4(x))+ x
+        # x = self.mem(x)
+        x = self.ffn(self.ln2(x))+ x
         return x
 
 
@@ -112,7 +110,7 @@ class RWKV(LightningModel):
             vocab_size, n_embd = file[keys[0]].shape
             args.n_embd = n_embd
             args.vocab_size = vocab_size
-            args.dim_ffn = file["blocks.0.ffn.key.weight"].shape[0]
+            args.dim_ffn = file["blocks.0.mem.key.weight"].shape[0]
             # model layers are model.2.x.yyy: find highest x
             n_layer = 0
             for key in keys:
@@ -136,8 +134,8 @@ class RWKV(LightningModel):
         self.emb = nn.Embedding(args.vocab_size, args.n_embd)
    
         self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
-        self.ln_out = nn.LayerNorm(args.n_embd)
-        self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
+        self.ln_out = nn.LayerNorm(args.n_embd*2)
+        self.head = nn.Linear(args.n_embd*2, args.vocab_size, bias=False, dtype=torch.bfloat16)
 
         
         if file:

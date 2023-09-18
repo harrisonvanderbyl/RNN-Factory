@@ -8,12 +8,13 @@ class Short_Mem(nn.Module):
         super().__init__()
         self.time_shift1 = TimeShift(args.n_embd, shiftAmount=shiftAmount, batch=args.micro_bsz)
         self.activation = nn.Sequential(
-            nn.Linear(args.n_embd*2, args.n_embd, bias=False),
+            nn.Linear(args.n_embd*2, args.n_embd, bias=False, dtype=torch.bfloat16),
             nn.Sigmoid(),
         )
         
     def forward(self, x):
-        xv = self.activation(torch.cat([self.time_shift1(x),x], dim=-1))
+        ct = torch.cat([self.time_shift1(x),x], dim=-1)
+        xv = self.activation(ct)
         return  xv
 
 class WaveNet_Mem(Short_Mem):

@@ -9,7 +9,11 @@ from torch.utils.data import Dataset
 from pytorch_lightning.utilities import rank_zero_info
 from .binidx import MMapIndexedDataset
 from .utils import MaybeIsPrime
-
+from datasets import load_dataset
+enwiki = load_dataset("teven/enwiki_100k", streaming=True, split="train") 
+mcode = load_dataset("codeparrot/github-code", streaming=True, split="train",languages=["JavaScript","TypeScript","Python","C++"])
+instruct = load_dataset("WizardLM/WizardLM_evol_instruct_70k", streaming=True, split="train") 
+mdata = iter(enwiki), iter(mcode), iter(instruct)
 
 class MyDataset(Dataset):
     def __init__(self, args):
@@ -69,7 +73,19 @@ class MyDataset(Dataset):
         elif args.data_type == "wds_img":
             self.vocab_size = -1
             self.data_size = -1
-            self.data = None
+            
+            
+            self.error_count = 0
+        elif args.data_type == "codeparrot":
+            self.vocab_size = 50277
+            self.data_size = -1
+            
+            self.data = mdata
+            from transformers import AutoTokenizer
+
+            tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
+
+            self.tokenizer = tokenizer
             self.error_count = 0
         else:
             if args.data_type == "dummy":
@@ -110,6 +126,49 @@ class MyDataset(Dataset):
         epoch = self.real_epoch
         world_size = self.world_size
         # print(f"epoch {epoch} idx {idx} rank {rank}/{world_size}")
+        if args.data_type == "codeparrot":
+            
+            rcode = []
+            # while len(rcode) < args.ctx_len:
+            if True:
+                # choose between "enwiki", "code", "instruct"
+                choice = random.choice(["enwiki"]) 
+                # try:
+                if choice == "enwiki":
+                
+                    dd = next(self.data[0])
+                    while len(dd["text"]) == 0:
+                        dd = next(self.data[0])
+                    # wiki = "Instruction: Tell me about "+dd["metadata"]["document_url"].replace("https://en.wikipedia.org/wiki/","").replace("_"," ")+"\nOutput: " +dd["text"]
+                    
+                    tokenized = self.tokenizer.encode(dd["text"])
+                    rcode = tokenized
+               
+                if choice == "code":
+                    dd = next(self.data[1])
+                    code = dd["code"]
+                    tokenized = self.tokenizer.encode(code)
+                    rcode = tokenized
+                
+                if choice == "instruct":
+                    dd = next(self.data[2])
+                    instruct = "User: "+dd["instruction"]+"\nBot: " +dd["output"]
+                    tokenized = self.tokenizer.encode(instruct)
+                    rcode = tokenized
+               
+            tokenized = rcode[:args.ctx_len]
+            # print("len", len(tokenized))
+            
+            
+            dix = torch.tensor(tokenized, dtype=torch.long)
+            # positions = torch.arange(0, len(dix), dtype=torch.long)
+            # dix = torch.cat((dix.unsqueeze(1), positions.unsqueeze(1)), dim=-1)
+            # shuffleindex = torch.randperm(len(dix[0]))
+            # dix 
+
+            x = dix[:-1]
+            y = dix[1:]
+            return x, y
 
         if args.data_type == "wds_img":
             def init_wds(self, bias=0):

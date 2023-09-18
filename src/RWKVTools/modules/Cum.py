@@ -16,7 +16,7 @@ class CumProd(StateModule):
         xx = torch.cat([self.state.to(x.device), x], dim=self.dim)
         yy = xx.cumprod(dim=-2)
         self.setState(yy[:,-1:,:])
-        return yy[:,:-1,:]
+        return yy[:,1:,:]
     
     def resetState(self):
         self.setState(self.origState.clone())
@@ -29,9 +29,9 @@ class CumSum(StateModule):
         self.origState = state.clone()
     def forward(self, x):
         xx = torch.cat([self.state.to(x.device), x], dim=self.dim)
-        yy = xx.cumsum()
+        yy = xx.cumsum(dim=self.dim)
         self.setState(yy[:,-1:,:])
-        return yy[:,:-1,:]
+        return yy[:,1:,:]
     
     def resetState(self):
         self.setState(self.origState.clone())
