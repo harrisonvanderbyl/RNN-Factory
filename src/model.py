@@ -134,8 +134,8 @@ class RWKV(LightningModel):
         self.emb = nn.Embedding(args.vocab_size, args.n_embd)
    
         self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
-        self.ln_out = nn.LayerNorm(args.n_embd*2)
-        self.head = nn.Linear(args.n_embd*2, args.vocab_size, bias=False, dtype=torch.bfloat16)
+        self.ln_out = nn.LayerNorm(args.n_embd)
+        self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
 
         
         if file:
