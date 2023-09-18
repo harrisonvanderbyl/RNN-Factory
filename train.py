@@ -58,7 +58,7 @@ if __name__ == "__main__":
     parser.add_argument("--random_seed", default="-1", type=int)
 
     parser.add_argument("--data_file", default="./enwik8.npy", type=str)
-    parser.add_argument("--data_type", default="numpy", type=str)
+    parser.add_argument("--data_type", default="codeparrot", type=str)
     parser.add_argument("--vocab_size", default=50277, type=int)  # vocab_size = 0 means auto (for char-level LM and .txt data)
 
     parser.add_argument("--ctx_len", default=1024, type=int)
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
     parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=24, type=int)
+    parser.add_argument("--n_layer", default=12, type=int)
     parser.add_argument("--n_embd", default=1024, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
     parser.add_argument("--dim_ffn", default=0, type=int)
