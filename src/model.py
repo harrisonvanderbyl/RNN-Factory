@@ -38,7 +38,7 @@ class Block(nn.Module):
         if layer_id == 0:
             self.ln0 = nn.LayerNorm(args.n_embd)
 
-        self.ln1 = nn.LayerNorm(args.n_embd)
+        # self.ln1 = nn.LayerNorm(args.n_embd)
         self.ln2 = nn.LayerNorm(args.n_embd)
         
         from .RWKVTools.modules.LongMem import Long_Mem
@@ -46,16 +46,16 @@ class Block(nn.Module):
         from .RWKVTools.modules.ShortMem import WaveNet_Mem
         from .RWKVTools.modules.RotaryMemory import MatForward
         
-        self.ffn = Feed_Forward(args, layer_id)
-        self.att = Long_Mem(args, layer_id)
+        # self.ffn = Feed_Forward(args, layer_id)
+        self.att = WaveNet_Mem(args, layer_id, cap=10)
 
    
     def forward(self, x):
 
         if self.layer_id == 0:
             x = self.ln0(x)
-        x = self.att(self.ln1(x)) + x
-        x = self.ffn(self.ln2(x))+ x
+        x = self.att(self.ln2(x)) + x
+        # x = self.ffn(self.ln2(x))+ x
         return x
 
 
