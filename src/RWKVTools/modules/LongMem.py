@@ -79,7 +79,7 @@ class Long_Mem(StateModule):
         r = self.receptance(xr).view(B, TT, self.n_head, self.head_size).transpose(1, 2)            # BTC -> BHTS
         k = self.key(xk).view(B, TT, self.n_head, self.head_size).transpose(1, 2).transpose(-2, -1) # BTC -> BHTS -> BHST
         v = self.value(xv).view(B, TT, self.n_head, -1).transpose(1, 2)                 # BTC -> BHTS
-        g = F.silu(self.gate(xg))
+        g = self.gate(xg).relu().sigmoid().pow(4)
 
         return r, k, v, g
 

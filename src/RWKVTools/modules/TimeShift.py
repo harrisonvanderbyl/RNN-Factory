@@ -8,10 +8,9 @@ class TimeShift(StateModule):
         super().__init__(batch,shiftAmount, dims)
         self.shift = shiftAmount
     
-    
     def forward(self, x):
-        tokens = x.shape[-2]
+        
         xapp = torch.cat([self.getState().to(x.device, x.dtype), x], dim=-2)
-        self.setState(xapp[:,-self.shift:,:])
-        return xapp[:,:tokens,:]
+        self.setState(xapp[:,-self.shift:])
+        return xapp[:,:-self.shift,:]
     

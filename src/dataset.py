@@ -129,8 +129,8 @@ class MyDataset(Dataset):
         if args.data_type == "codeparrot":
             
             rcode = []
-            # while len(rcode) < args.ctx_len:
-            if True:
+            while len(rcode) < args.ctx_len:
+            # if True:
                 # choose between "enwiki", "code", "instruct"
                 choice = random.choice(["enwiki"]) 
                 # try:
@@ -142,7 +142,7 @@ class MyDataset(Dataset):
                     # wiki = "Instruction: Tell me about "+dd["metadata"]["document_url"].replace("https://en.wikipedia.org/wiki/","").replace("_"," ")+"\nOutput: " +dd["text"]
                     
                     tokenized = self.tokenizer.encode(dd["text"])
-                    rcode = tokenized
+                    rcode = rcode + tokenized
                
                 if choice == "code":
                     dd = next(self.data[1])

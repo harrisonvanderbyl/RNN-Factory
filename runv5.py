@@ -21,13 +21,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-30.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-0.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context = 'Rainbows are'
+context = 'Mount everest is located in '
 
 
 NUM_TRIALS = 999

@@ -11,7 +11,6 @@ class MatForward(nn.Module):
         self.layer_id = layer_id
         
         self.complexsize = args.n_embd
-        self.short = WaveNet_Mem(args, layer_id, undialated=True)
         self.key = nn.Linear(args.n_embd,self.complexsize*2, bias=False, dtype=torch.bfloat16)
         self.cumprod = CumProd(torch.complex(torch.ones(args.micro_bsz, 1, self.complexsize), torch.zeros(args.micro_bsz, 1, self.complexsize)))
         self.cummax = CumMax()
@@ -26,7 +25,7 @@ class MatForward(nn.Module):
         scale = self.cummax(torch.abs(complexval))
         complexval2 = complexval / scale
         kv = self.cumprod(complexval2)
-        out = self.activation(torch.view_as_real(kv).reshape(B, T, self.complexsize*2))  * self.short(x* scale)
+        out = self.activation(torch.view_as_real(kv).reshape(B, T, self.complexsize*2)).relu().sigmoid().pow(4) 
        
         return out 
     

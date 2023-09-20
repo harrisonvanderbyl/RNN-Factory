@@ -39,7 +39,7 @@ class Block(nn.Module):
             self.ln0 = nn.LayerNorm(args.n_embd)
 
         # self.ln1 = nn.LayerNorm(args.n_embd)
-        self.ln2 = nn.LayerNorm(args.n_embd)
+        # self.ln2 = nn.LayerNorm(args.n_embd)
         
         from .RWKVTools.modules.LongMem import Long_Mem
         from .RWKVTools.modules.FFN import Feed_Forward
@@ -47,15 +47,16 @@ class Block(nn.Module):
         from .RWKVTools.modules.RotaryMemory import MatForward
         
         # self.ffn = Feed_Forward(args, layer_id)
-        self.att = WaveNet_Mem(args, layer_id, cap=10)
+        self.att = WaveNet_Mem(args, layer_id, undialated=True)
+        self.mem = Long_Mem(args, layer_id)
 
    
     def forward(self, x):
 
         if self.layer_id == 0:
             x = self.ln0(x)
-        x = self.att(self.ln2(x)) + x
-        # x = self.ffn(self.ln2(x))+ x
+        x = self.att(x) + x
+        x = self.mem(x) + x
         return x
 
 
@@ -107,7 +108,10 @@ class RWKV(LightningModel):
             vocab_size, n_embd = file[keys[0]].shape
             args.n_embd = n_embd
             args.vocab_size = vocab_size
-            args.dim_ffn = file["blocks.0.ffn.key.weight"].shape[0]
+            try:
+                args.dim_ffn = file["blocks.0.ffn.key.weight"].shape[0]
+            except:
+                args.dim_ffn = 2 * args.n_embd
             # model layers are model.2.x.yyy: find highest x
             n_layer = 0
             for key in keys:
