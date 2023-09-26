@@ -12,7 +12,18 @@ args = types.SimpleNamespace()
 ########################################################################################################
 # Step 1: set model & config (use v4 to run your trained-from-scratch models. v4 and v4neo are compatible)
 ########################################################################################################
-
+import torch.nn.functional as F
+def sample_logits(out, temperature=1.0, top_p=0.8):
+    probs = F.softmax(out.float().cpu(), dim=-1).numpy()
+    sorted_probs = np.sort(probs)[::-1]
+    cumulative_probs = np.cumsum(sorted_probs)
+    cutoff = float(sorted_probs[np.argmax(cumulative_probs > top_p)])
+    probs[probs < cutoff] = 0
+    if temperature != 1.0:
+        probs = probs ** (1.0 / temperature)
+    probs = probs / np.sum(probs)
+    out = np.random.choice(a=len(probs), p=probs)
+    return out
 
 TOKEN_MODE = "pile"
 WORD_NAME = [
@@ -21,20 +32,20 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-0.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-5.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context = 'Mount everest is located in '
+context =   '==Australia== \n' 
 
 
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
 
-TEMPERATURE = 1.0
-top_p = 0.8
+TEMPERATURE = 0.9
+top_p = 0.9
 top_p_newline = 0.9  # only used in TOKEN_MODE = char
 
 DEBUG_DEBUG = False  # True False --> show softmax output
@@ -66,13 +77,13 @@ tokenizer = TOKENIZER(WORD_NAME, UNKNOWN_CHAR=UNKNOWN_CHAR)
 if TOKEN_MODE == "pile":
     assert tokenizer.tokenizer.decode([187]) == '\n'
 
-testdata = "The Cute RNN model:"
-testdata = tokenizer.tokenizer.encode(testdata)
+testdata = torch.randint(0, tokenizer.vocab_size, (128,))
 
 model.resetState()
 atonce = model.forward(testdata, allLogits=True)
 print(f'At once:', atonce.shape)
 model.resetState()
+# model = model.cuda()
 for i in range(len(testdata)):
     atatime = model.forward(testdata[i:i+1])
     error = torch.max(torch.abs(atonce[0,i] - atatime)).item()
@@ -139,13 +150,8 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
         # if TOKEN_MODE == "pile":
         out[0] = -99  # disable <|endoftext|>
   
-        ttt = tokenizer.sample_logits(
-            out,
-            x,
-            1,
-            temperature=TEMPERATURE,
-            top_p_usual=top_p,
-            top_p_newline=top_p_newline,
+        ttt = sample_logits(
+            out, temperature=TEMPERATURE, top_p=top_p
         )
         ctx += [ttt]
 

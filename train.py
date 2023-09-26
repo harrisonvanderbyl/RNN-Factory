@@ -57,8 +57,8 @@ if __name__ == "__main__":
     parser.add_argument("--proj_dir", default="out", type=str)
     parser.add_argument("--random_seed", default="-1", type=int)
 
-    parser.add_argument("--data_file", default="./instruct_data.npy", type=str)
-    parser.add_argument("--data_type", default="codeparrot", type=str)
+    parser.add_argument("--data_file", default="./enwik8.npy", type=str)
+    parser.add_argument("--data_type", default="stream", type=str)
     parser.add_argument("--vocab_size", default=50277, type=int)  # vocab_size = 0 means auto (for char-level LM and .txt data)
 
     parser.add_argument("--ctx_len", default=1024, type=int)
@@ -68,10 +68,10 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
     parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=24, type=int)
-    parser.add_argument("--n_embd", default=1024, type=int)
+    parser.add_argument("--n_layer", default=12, type=int)
+    parser.add_argument("--n_embd", default=2048, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
-    parser.add_argument("--dim_ffn", default=0, type=int)
+    parser.add_argument("--dim_ffn", default=4096, type=int)
     parser.add_argument("--pre_ffn", default=0, type=int)  # replace first att layer by ffn (sometimes better)
     parser.add_argument("--head_qk", default=0, type=int)  # my headQK trick
     parser.add_argument("--tiny_att_dim", default=0, type=int)  # tiny attention dim
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     )
     rank_zero_info(str(vars(args)) + "\n")
 
-    assert args.data_type in ["utf-8", "utf-16le", "numpy", "binidx", "dummy", "wds_img", "uint16", "codeparrot"]
+    assert args.data_type in ["utf-8", "utf-16le", "numpy", "binidx", "dummy", "wds_img", "uint16", "stream"]
 
     if args.lr_final == 0 or args.lr_init == 0:
         rank_zero_info("\n\nNote: lr_final = 0 or lr_init = 0. Using linear LR schedule instead.\n\n")
@@ -298,7 +298,7 @@ if __name__ == "__main__":
     elif args.precision == "fp16":
         args.precision = 16
     else:
-        args.precision = "bf16"
+        args.precision = "bf16-mixed"
 
     ########################################################################################################
 

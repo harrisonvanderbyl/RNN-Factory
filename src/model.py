@@ -38,25 +38,18 @@ class Block(nn.Module):
         if layer_id == 0:
             self.ln0 = nn.LayerNorm(args.n_embd)
 
-        # self.ln1 = nn.LayerNorm(args.n_embd)
-        # self.ln2 = nn.LayerNorm(args.n_embd)
+        self.ln1 = nn.LayerNorm(args.n_embd)
+    
+        from .RWKVTools.modules.FFN import SuperFFN
         
-        from .RWKVTools.modules.LongMem import Long_Mem
-        from .RWKVTools.modules.FFN import Feed_Forward
-        from .RWKVTools.modules.ShortMem import WaveNet_Mem
-        from .RWKVTools.modules.RotaryMemory import MatForward
-        
-        # self.ffn = Feed_Forward(args, layer_id)
-        self.att = WaveNet_Mem(args, layer_id, undialated=True)
-        self.mem = Long_Mem(args, layer_id)
-
-   
+        self.ffn = SuperFFN(args, layer_id)
+  
     def forward(self, x):
 
         if self.layer_id == 0:
             x = self.ln0(x)
-        x = self.att(x) + x
-        x = self.mem(x) + x
+
+        x = self.ffn(self.ln1(x)) + x
         return x
 
 
@@ -90,7 +83,7 @@ class RWKV(LightningModel):
             modelpath = None
         
         if modelpath:
-            file = torch.load(modelpath, map_location="cuda")
+            file = torch.load(modelpath, map_location="cpu")
             keys = list(file.keys())
             print("keys", keys)
             # remove _orig_mod from keys for compatibility with torch.compile
@@ -109,7 +102,7 @@ class RWKV(LightningModel):
             args.n_embd = n_embd
             args.vocab_size = vocab_size
             try:
-                args.dim_ffn = file["blocks.0.ffn.key.weight"].shape[0]
+                args.dim_ffn = file["blocks.0.ffn.value.weight"].shape[1]
             except:
                 args.dim_ffn = 2 * args.n_embd
             # model layers are model.2.x.yyy: find highest x
@@ -126,7 +119,7 @@ class RWKV(LightningModel):
         try:
             args.dim_ffn
         except:
-            args.dim_ffn = 4 * args.n_embd
+            args.dim_ffn = 1 * args.n_embd
 
         self.args = args
 
@@ -169,7 +162,7 @@ class RWKV(LightningModel):
         if args.grad_cp == 1:
             return deepspeed.checkpointing.checkpoint(self.blocks, x)
         else:
-            x = self.blocks(x)
+            x = self.blocks(x) # residual
         x = self.ln_out(x)
         x = self.head(x)
         return x
@@ -194,7 +187,7 @@ class RWKV(LightningModel):
 
             gain = 1.0
             scale = 1.0
-            if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n or '.mask.' in n:
+            if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n or '.mask.' in n or "_rotbias" in n:
                 if 'ln_x.weight' in n:
                     layer_scale = (1+int(n.split('.')[1])) / self.args.n_layer
                     m[n] = (p * 0.0) + (layer_scale ** 0.7)
