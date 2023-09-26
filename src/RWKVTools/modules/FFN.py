@@ -43,6 +43,25 @@ class PassThrough(nn.Module):
         super().__init__()
     def forward(self, x):
         return x
+    
+### SuperFFN
+# SuperFFN is a FFN with an input pulling from a dialated wavenet style structure
+# This is done by having 8 time_shifts, each with a different shift amount, allowing for long term memory
+# The gating mechanism has access to only the last 8 values, giving short term memory to the gating mechanism
+## Graphing
+#### Chunk 0 8
+#### Shift 1 8 0,1,2,3,4,5,6,7
+#### Cat 2 8 -1
+#### Linear 3 
+#### Sigmoid 4
+#### Linear 0 SetHeight 1
+#### Shift 6 8 1,2,4,8,16,32,64,128
+#### Sum 7 8
+#### Linear 8
+#### RS^4 9
+#### Linear 10
+#### Mult 11 5
+#####
 
 class SuperFFN(nn.Module):
     def __init__(self, args, layer_id):
@@ -57,7 +76,6 @@ class SuperFFN(nn.Module):
         
     def forward(self, x):
         
-        B, T, C = x.size()
         vx = torch.chunk(x,8,-1)
         xx = torch.cat([self.time_shift[i](vx[i]) for i in range(8)], dim=-1)
         rec = self.receptance(xx).sigmoid()
@@ -68,3 +86,4 @@ class SuperFFN(nn.Module):
 
        
         return kv
+    
