@@ -63,6 +63,20 @@ class PassThrough(nn.Module):
 #### Mult 11 5
 #####
 
+### SFFNetwork
+# A SuperFFN network is a simple stack of SuperFFN layers, some residual, and some layernorms
+## Graphing
+#### Embedding 0
+#### LayerNorm 1
+#### LayerNorm 2
+#### SuperFFN 3
+#### Add 4 2
+#### Repeat 5 3 SetHeight 5
+#### LayerNorm 6
+#### Linear 7
+#### Logits 8
+#####
+
 class SuperFFN(nn.Module):
     def __init__(self, args, layer_id):
         super().__init__()

@@ -1,4 +1,4 @@
-from pylatex import Document, Section, Subsection, Command, Subsubsection, NewLine
+from pylatex import Document, Section, Subsection, Command, Subsubsection, NewLine, Figure, NewPage
 
 class DocGraph():
     def __init__(self,name):
@@ -9,7 +9,9 @@ class DocGraph():
     def createGraph(self):
         from pyvis.network import Network
 
-        net = Network(directed=True)
+        size = 2048
+
+        net = Network(directed=True, layout=True, height=f"{size}px", width=f"{size}px")
 
         # add the first node
         net.add_node("Input", label="Input", shape="box", level=0)
@@ -50,13 +52,21 @@ class DocGraph():
 
             
 
-            elif type == "Mult":
+            elif type == "Mult" or type == "Add":
                 name = f"{type}-{mappings.__len__()}"
                 mappings.append(f"{name}")
                 net.add_node(f"{name}", label=f"{type}", shape="box", level=level)
                 net.add_edge(f"{mappings[int(targets[0])]}", f"{name}")
                 net.add_edge(f"{mappings[int(targets[1])]}", f"{name}")
+            
+            elif type == "Repeat":
+                name = f"{type}-{mappings.__len__()}"
+                mappings.append(f"{name}")
+                net.add_node(f"{name}", label=f"{type}", shape="box", level=level)
+                net.add_edge(f"{mappings[int(targets[0])]}", f"{name}")
+                net.add_edge(f"{name}", f"{mappings[int(targets[1])]}")
                 
+
             elif type == "Sum":
                 name = f"Sum-{mappings.__len__()}"
                 mappings.append(f"{name}")
@@ -71,7 +81,17 @@ class DocGraph():
                 net.add_edge(f"{mappings[int(targets[0])]}", f"{name}")
                 
 
-        net.generate_html("graph.html")
+        graph = net.generate_html()
+        net.write_html("test.html")
+        # render html to image
+        import imgkit
+        # if paper/imgs does not exist, create it
+        import os
+        if not os.path.exists("./paper/imgs"):
+            os.mkdir("./paper/imgs")
+        # save to file
+        imgkit.from_string(graph, f"./paper/imgs/{self.name}.png", options={"width": f"{size}", "height": f"{size}"})
+        return f"./imgs/{self.name}.png"
 
 def getDocumentation(filename):
     with open(filename, "r") as f:
@@ -156,19 +176,22 @@ def write_paper():
             
     docs = getDocumentation("./src/RWKVTools/modules/FFN.py")
 
+    doc.append(NewPage())
+
     doc.append(Section("Documentation"))
     for key in docs:
-        doc.append(Subsection(key))
-        doc.append(docs[key].description)
-        doc.append(Subsubsection("Graphing"))
-        for node in docs[key].nodes:
-            doc.append(node)
-            doc.append(NewLine())
-
-        docs[key].createGraph()
         
-            
-            
+        pngpath = docs[key].createGraph()
+        doc.append(Subsection(key))
+
+        doc.append(docs[key].description)
+
+        fig = Figure(position='h')
+        fig.add_image(pngpath, width='400px')
+        fig.add_caption(key)
+        doc.append(fig)
+
+        
 
 
     # make pdf
