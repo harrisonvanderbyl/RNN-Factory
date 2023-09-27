@@ -32,13 +32,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-5.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-2.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context =   '==Australia== \n' 
+context =   'User: Show me a python program using tensorflow\n' 
 
 
 NUM_TRIALS = 999
