@@ -132,7 +132,12 @@ class MyDataset(Dataset):
             while len(rcode) < args.ctx_len:
             # if True:
                 # choose between "enwiki", "code", "instruct"
-                choice = random.choice(["enwiki","code","instruct"]) 
+                choices = ["enwiki","code","instruct"]
+                # filter based on data_file, eg "" is all, "enwiki" is only enwiki and "code,instruct" is only code and instruct
+                if args.data_file != "":
+                    choices = args.data_file.split(",")
+                choice = random.choice(choices)
+
                 # try:
                 if choice == "enwiki":
                 

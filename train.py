@@ -57,21 +57,21 @@ if __name__ == "__main__":
     parser.add_argument("--proj_dir", default="out", type=str)
     parser.add_argument("--random_seed", default="-1", type=int)
 
-    parser.add_argument("--data_file", default="./instruct1.npy", type=str)
+    parser.add_argument("--data_file", default="enwiki", type=str)
     parser.add_argument("--data_type", default="stream", type=str)
     parser.add_argument("--vocab_size", default=50277, type=int)  # vocab_size = 0 means auto (for char-level LM and .txt data)
 
     parser.add_argument("--ctx_len", default=1024, type=int)
     parser.add_argument("--epoch_steps", default=2000, type=int)  # a mini "epoch" has [epoch_steps] steps tf32/ 7.5 fp16 / 9.0
     parser.add_argument("--epoch_count", default=500, type=int)  # train for this many "epochs". will continue afterwards with lr = lr_final
-    parser.add_argument("--epoch_begin", default=2, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
+    parser.add_argument("--epoch_begin", default=0, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
-    parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=24, type=int)
+    parser.add_argument("--micro_bsz", default=12, type=int)  # micro batch size (batch size per GPU)
+    parser.add_argument("--n_layer", default=16, type=int)
     parser.add_argument("--n_embd", default=2048, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
-    parser.add_argument("--dim_ffn", default=4096, type=int)
+    parser.add_argument("--dim_ffn", default=2048, type=int)
     parser.add_argument("--pre_ffn", default=0, type=int)  # replace first att layer by ffn (sometimes better)
     parser.add_argument("--head_qk", default=0, type=int)  # my headQK trick
     parser.add_argument("--tiny_att_dim", default=0, type=int)  # tiny attention dim
