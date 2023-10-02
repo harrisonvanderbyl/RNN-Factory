@@ -32,13 +32,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-2.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-1.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context =   'User: Show me a python program using tensorflow\n' 
+context =   'Instruction: Write a python for loop to count\n' 
 
 
 NUM_TRIALS = 999
@@ -59,7 +59,7 @@ model = model.eval()
 model = model.requires_grad_(False)
 model = model.float()
 # model = model.half()
-# model = model.cuda()
+model = model.cuda()
 
 # get model memory use
 print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
@@ -148,11 +148,13 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
         if DEBUG_DEBUG:
             print("model", np.array(x), "==>", np.array(out), np.max(out.cpu().numpy()), np.min(out.cpu().numpy()))
         # if TOKEN_MODE == "pile":
-        out[0] = -99  # disable <|endoftext|>
+        # out[0] = -99  # disable <|endoftext|>
   
         ttt = sample_logits(
             out, temperature=TEMPERATURE, top_p=top_p
         )
+        if ttt == 0:
+            break
         ctx += [ttt]
 
         if tokenizer.charMode:

@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
 
-    parser.add_argument("--load_model", default="", type=str)  # full path, with .pth
+    parser.add_argument("--load_model", default="/home/harrison/Documents/RNN-Factory/out/rwkv-45.pth", type=str)  # full path, with .pth
     parser.add_argument("--wandb", default="rwkv-xres", type=str)  # wandb project name. if "" then don't use wandb
     parser.add_argument("--proj_dir", default="out", type=str)
     parser.add_argument("--random_seed", default="-1", type=int)
@@ -64,14 +64,14 @@ if __name__ == "__main__":
     parser.add_argument("--ctx_len", default=1024, type=int)
     parser.add_argument("--epoch_steps", default=2000, type=int)  # a mini "epoch" has [epoch_steps] steps tf32/ 7.5 fp16 / 9.0
     parser.add_argument("--epoch_count", default=500, type=int)  # train for this many "epochs". will continue afterwards with lr = lr_final
-    parser.add_argument("--epoch_begin", default=0, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
+    parser.add_argument("--epoch_begin", default=46, type=int)  # if you load a model trained for x "epochs", set epoch_begin = x
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
-    parser.add_argument("--micro_bsz", default=12, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=16, type=int)
-    parser.add_argument("--n_embd", default=2048, type=int)
+    parser.add_argument("--micro_bsz", default=8, type=int)  # micro batch size (batch size per GPU)
+    parser.add_argument("--n_layer", default=24, type=int)
+    parser.add_argument("--n_embd", default=1024, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
-    parser.add_argument("--dim_ffn", default=2048, type=int)
+    parser.add_argument("--dim_ffn", default=4096, type=int)
     parser.add_argument("--pre_ffn", default=0, type=int)  # replace first att layer by ffn (sometimes better)
     parser.add_argument("--head_qk", default=0, type=int)  # my headQK trick
     parser.add_argument("--tiny_att_dim", default=0, type=int)  # tiny attention dim
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     parser.add_argument("--accelerator", default="auto", type=str)  # cpu / gpu / ddp / ddp_find_unused_parameters_false
     parser.add_argument("--devices", default=1, type=int)  # number of GPUs
     parser.add_argument("--precision", default="bf16", type=str)  # fp32 / tf32 / fp16 / bf16
-    parser.add_argument("--strategy", default="ddp_find_unused_parameters_false", type=str)  # ddp / ddp_find_unused_parameters_false / deepspeed_stage_1 / deepspeed_stage_2 / deepspeed_stage_2_offload / deepspeed_stage_3 / deepspeed_stage_3_offload
+    parser.add_argument("--strategy", default="deepspeed", type=str)  # ddp / ddp_find_unused_parameters_false / deepspeed_stage_1 / deepspeed_stage_2 / deepspeed_stage_2_offload / deepspeed_stage_3 / deepspeed_stage_3_offload
     
     #num nodes
     parser.add_argument("--num_nodes", default=1, type=int)  # number of nodes
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     )
     rank_zero_info(str(vars(args)) + "\n")
 
-    assert args.data_type in ["utf-8", "utf-16le", "numpy", "binidx", "dummy", "wds_img", "uint16", "stream"]
+    assert args.data_type in ["utf-8", "utf-16le", "numpy", "binidx", "dummy", "wds_img", "uint16", "stream", "macrobatch"]
 
     if args.lr_final == 0 or args.lr_init == 0:
         rank_zero_info("\n\nNote: lr_final = 0 or lr_init = 0. Using linear LR schedule instead.\n\n")

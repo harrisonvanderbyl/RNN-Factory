@@ -64,6 +64,14 @@ class MyDataset(Dataset):
             rank_zero_info(f"Current vocab size = {self.vocab_size} (make sure it's correct)")
             self.data_size = len(self.data)
             rank_zero_info(f"Data has {self.data_size} tokens.")
+        elif args.data_type == "macrobatch":
+
+            self.data = torch.load(args.data_file)
+                      
+            self.vocab_size = args.vocab_size
+            rank_zero_info(f"Current vocab size = {self.vocab_size} (make sure it's correct)")
+            self.data_size = len(self.data)
+            rank_zero_info(f"Data has {self.data_size} tokens.")
         elif args.data_type == "uint16":
             self.data = np.fromfile(args.data_file, dtype=np.uint16).astype("int32").reshape(-1, args.my_sample_len)
             self.vocab_size = args.vocab_size
@@ -174,7 +182,18 @@ class MyDataset(Dataset):
             x = dix[:-1]
             y = dix[1:]
             return x, y
+        if args.data_type == "macrobatch":
 
+            
+            dix = self.data
+            # positions = torch.arange(0, len(dix), dtype=torch.long)
+            # dix = torch.cat((dix.unsqueeze(1), positions.unsqueeze(1)), dim=-1)
+            # shuffleindex = torch.randperm(len(dix[0]))
+            # dix 
+
+            x = dix[:-1]
+            y = dix[1:]
+            return x, y
         if args.data_type == "wds_img":
             def init_wds(self, bias=0):
                 def identity(x):
