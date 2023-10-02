@@ -86,7 +86,7 @@ class SuperFFN(nn.Module):
         self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False, dtype=torch.bfloat16)
         self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False, dtype=torch.bfloat16)
         self.time_shift = nn.ModuleList([TimeShift(args.n_embd//8, shiftAmount=(i), batch=args.micro_bsz) if i > 0 else PassThrough() for i in range(8)])
-        self.time_shift2 = nn.ModuleList([TimeShift(args.dim_ffn, shiftAmount=(2**(i-1)), batch=args.micro_bsz) if i > 0 else PassThrough() for i in range(8)])
+        self.time_shift2 = nn.ModuleList([TimeShift(args.dim_ffn, shiftAmount=(i), batch=args.micro_bsz) if i > 0 else PassThrough() for i in range(8)])
         
     def forward(self, x):
         

@@ -32,13 +32,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-1.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-5.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context =   'Instruction: Write a python for loop to count\n' 
+context =   'Instruction: Write a c++ for loop that prints the numbers 1 to 10.\n' 
 
 
 NUM_TRIALS = 999
@@ -59,7 +59,7 @@ model = model.eval()
 model = model.requires_grad_(False)
 model = model.float()
 # model = model.half()
-model = model.cuda()
+# model = model.cuda()
 
 # get model memory use
 print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
