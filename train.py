@@ -309,8 +309,8 @@ if __name__ == "__main__":
     args.vocab_size = train_data.vocab_size
 
     
-    from src.model import RWKV
-    model = RWKV(args)
+    from src.model import Experimental
+    model = Experimental(args)
     if args.precision == 32:
         model = model.float()
 

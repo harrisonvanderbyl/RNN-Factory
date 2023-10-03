@@ -3,6 +3,7 @@
 ########################################################################################################
 
 import os, importlib
+from types import SimpleNamespace
 import torch
 # torch._C._jit_set_profiling_executor(True)
 # torch._C._jit_set_profiling_mode(True)
@@ -28,7 +29,7 @@ import torch.nn.functional as F
 
 
     
-class Block(nn.Module):
+class v4Block(nn.Module):
     def __init__(self, args, layer_id):
         super().__init__()
         self.args = args
@@ -39,17 +40,49 @@ class Block(nn.Module):
             self.ln0 = nn.LayerNorm(args.n_embd)
 
         self.ln1 = nn.LayerNorm(args.n_embd)
+        self.ln2 = nn.LayerNorm(args.n_embd)    
     
-        from .RWKVTools.modules.FFN import SuperFFN
+        from .RWKVTools.modules.FFN import Feed_Forward
+        from .RWKVTools.modules.LongMem import RWKVv4Att
         
-        self.ffn = SuperFFN(args, layer_id)
+        self.ffn = Feed_Forward(args, layer_id)
+        self.att = RWKVv4Att(args, layer_id)
   
     def forward(self, x):
 
         if self.layer_id == 0:
             x = self.ln0(x)
 
-        x = self.ffn(self.ln1(x)) + x
+        x = self.att(self.ln1(x)) + x
+        x = self.ffn(self.ln2(x)) + x
+        return x
+    
+class v5Block(nn.Module):
+    def __init__(self, args, layer_id):
+        super().__init__()
+        self.args = args
+        self.layer_id = layer_id
+        self.lastlayer = args.n_layer-1
+
+        if layer_id == 0:
+            self.ln0 = nn.LayerNorm(args.n_embd)
+
+        self.ln1 = nn.LayerNorm(args.n_embd)
+        self.ln2 = nn.LayerNorm(args.n_embd)    
+    
+        from .RWKVTools.modules.FFN import Feed_Forward
+        from .RWKVTools.modules.LongMem import Long_Mem
+        
+        self.ffn = Feed_Forward(args, layer_id)
+        self.att = Long_Mem(args, layer_id)
+  
+    def forward(self, x):
+
+        if self.layer_id == 0:
+            x = self.ln0(x)
+
+        x = self.att(self.ln1(x)) + x
+        x = self.ffn(self.ln2(x)) + x
         return x
 
 
@@ -57,8 +90,8 @@ class Block(nn.Module):
 from .RWKVTools.RNN import LightningModel
 
 
-class RWKV(LightningModel):
-    def __init__(self, args):
+class Experimental(LightningModel):
+    def __init__(self, args, Block=v5Block):
         super().__init__()
         try:
             self.batches = args.micro_bsz
@@ -98,7 +131,7 @@ class RWKV(LightningModel):
             keys = list(file.keys())
 
             # detect model details
-            vocab_size, n_embd = file[keys[0]].shape
+            vocab_size, n_embd = file["emb.weight"].shape
             args.n_embd = n_embd
             args.vocab_size = vocab_size
             try:
@@ -126,7 +159,6 @@ class RWKV(LightningModel):
 
 
         self.emb = nn.Embedding(args.vocab_size, args.n_embd)
-   
         self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
         self.ln_out = nn.LayerNorm(args.n_embd)
         self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
@@ -234,3 +266,7 @@ class RWKV(LightningModel):
         torch.cuda.empty_cache()
         return m
     
+
+class RWKV_v4(Experimental):
+    def __init__(self, args):
+        super().__init__(args, Block=v4Block)

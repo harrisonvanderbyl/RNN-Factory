@@ -32,14 +32,13 @@ WORD_NAME = [
 ]  # [vocab, vocab] for Pile model
 UNKNOWN_CHAR = None
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/out/rwkv-5.pth'
+MODEL_NAME = './src/pipeline/models/small.pth'
 
 args.load_model = MODEL_NAME
 
 
 
-context =   'Instruction: Write a c++ for loop that prints the numbers 1 to 10.\n' 
-
+context =   '\n'
 
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
@@ -52,14 +51,14 @@ DEBUG_DEBUG = False  # True False --> show softmax output
 
 ########################################################################################################
 
-from src.model import RWKV
+from src.model import RWKV4
 
-model = RWKV(args)
+model = RWKV4(args)
 model = model.eval()
 model = model.requires_grad_(False)
-model = model.float()
-# model = model.half()
-# model = model.cuda()
+# model = model.float()
+model = model.half()
+model = model.cuda()
 
 # get model memory use
 print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
@@ -98,6 +97,7 @@ if tokenizer.charMode:
     ctx = [tokenizer.stoi.get(s, tokenizer.UNKNOWN_CHAR) for s in context]
 else:
     ctx = tokenizer.tokenizer.encode(context)
+
 src_len = len(ctx)
 src_ctx = ctx.copy()
 
