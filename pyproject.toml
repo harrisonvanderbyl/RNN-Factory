@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rnnfactory"
+version = "0.0.1"
+authors = [
+  { name="Harrison Vanderbyl", email="harrison.vanderbyl@gmail.com" },
+]
+description = "An RNN Factory for PyTorch"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/harrisonvanderbyl/RNN-Factory"
+"Bug Tracker" = "https://github.com/harrisonvanderbyl/RNN-Factory/issues"

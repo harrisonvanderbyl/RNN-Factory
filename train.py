@@ -68,8 +68,8 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
     parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=24, type=int)
-    parser.add_argument("--n_embd", default=1024, type=int)
+    parser.add_argument("--n_layer", default=12, type=int)
+    parser.add_argument("--n_embd", default=2048, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
     parser.add_argument("--dim_ffn", default=1024*3, type=int)
     parser.add_argument("--pre_ffn", default=0, type=int)  # replace first att layer by ffn (sometimes better)
@@ -302,14 +302,14 @@ if __name__ == "__main__":
 
     ########################################################################################################
 
-    from src.trainer import train_callback, generate_init_weight
-    from src.dataset import MyDataset
+    from src.training.trainer import train_callback, generate_init_weight
+    from datasets import MyDataset
 
     train_data = MyDataset(args)
     args.vocab_size = train_data.vocab_size
 
     
-    from src.model import Experimental
+    from src.models import Experimental
     model = Experimental(args)
     if args.precision == 32:
         model = model.float()
