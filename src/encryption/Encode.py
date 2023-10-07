@@ -8,16 +8,16 @@ from safetensors.torch import save_file
 
 from src.tokenizer import world
 tokenizer = world
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/pipeline/models/5.pth'
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/training/pipeline/models/5.pth'
 
 args.load_model = MODEL_NAME
 
-inpute = "message=[here is a secret message: |Entire Bee Movie Script|]"
+inpute = "message=[A red car with many people inside]"
 context = f"### Instruction:\nRepeat the input exactly \n### Input:\n{inpute} \n### Response:"
 
 ########################################################################################################
 
-from models import RWKV_v5
+from src.models import RWKV_v5
 
 model = RWKV_v5(args)
 model = model.eval()

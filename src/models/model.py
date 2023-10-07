@@ -37,7 +37,7 @@ class experimentalBlock(nn.Module):
         self.args = args
         self.layer_id = layer_id
         self.lastlayer = args.n_layer-1
-        from modules.FFN import Feed_Forward
+        from .modules.FFN import Feed_Forward
         if layer_id == 0:
             self.ln0 = nn.LayerNorm(args.n_embd)
         
@@ -46,8 +46,8 @@ class experimentalBlock(nn.Module):
 
     
         
-        from modules.RotaryMemory import MatForward
-        from modules.LongMem import Long_Mem
+        from .modules.RotaryMemory import MatForward
+        from .modules.LongMem import Long_Mem
         
         blockformat = [Long_Mem, Long_Mem]
         psz = self.layer_id % len(blockformat)

@@ -57,7 +57,7 @@ if __name__ == "__main__":
     parser.add_argument("--proj_dir", default="out", type=str)
     parser.add_argument("--random_seed", default="-1", type=int)
 
-    parser.add_argument("--data_file", default="enwik8.npy", type=str)
+    parser.add_argument("--data_file", default="src/datasets/pretokenized/enwik8.npy", type=str)
     parser.add_argument("--data_type", default="numpy", type=str)
     parser.add_argument("--vocab_size", default=50277, type=int)  # vocab_size = 0 means auto (for char-level LM and .txt data)
 
@@ -303,7 +303,7 @@ if __name__ == "__main__":
     ########################################################################################################
 
     from src.training.trainer import train_callback, generate_init_weight
-    from datasets import MyDataset
+    from src.datasets import MyDataset
 
     train_data = MyDataset(args)
     args.vocab_size = train_data.vocab_size

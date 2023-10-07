@@ -30,6 +30,8 @@ tokenizer = world
 
 context =   '\n Computer science is'
 
+doGreedy = True
+
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
 
@@ -122,16 +124,26 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
             model.resetState()
 
             out = model.forward(ctx)
+            # if secrets.safetensors exists, load it
+            import os
+            if os.path.exists("secret.safetensors"):
+                from safetensors.torch import load_file
+                init_state = load_file("secret.safetensors")
+                model.setState(init_state)
+                print("Loaded secret.safetensors")
+           
         else:
             out = model.forward(x)
         if DEBUG_DEBUG:
             print("model", np.array(x), "==>", np.array(out), np.max(out.cpu().numpy()), np.min(out.cpu().numpy()))
         # if TOKEN_MODE == "pile":
         # out[0] = -99  # disable <|endoftext|>
-  
-        ttt = sample_logits(
-            out, temperature=TEMPERATURE, top_p=top_p
-        )
+        if doGreedy:
+            ttt = torch.argmax(out, dim=-1).item()
+        else:
+            ttt = sample_logits(
+                out, temperature=TEMPERATURE, top_p=top_p
+            )
         if ttt == 0:
             break
         ctx += [ttt]
