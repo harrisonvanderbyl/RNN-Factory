@@ -28,9 +28,9 @@ model = RWKV_v5(args)
 from src.tokenizer import neox, world
 tokenizer = world
 
-context =   '\n Computer science is'
+context =   '\n### Instruction:\nWrite a c++ program to filter an array of integers into only even numbers \n### Response:\n'
 
-doGreedy = True
+doGreedy = False
 
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
@@ -124,13 +124,7 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
             model.resetState()
 
             out = model.forward(ctx)
-            # if secrets.safetensors exists, load it
-            import os
-            if os.path.exists("secret.safetensors"):
-                from safetensors.torch import load_file
-                init_state = load_file("secret.safetensors")
-                model.setState(init_state)
-                print("Loaded secret.safetensors")
+           
            
         else:
             out = model.forward(x)

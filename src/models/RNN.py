@@ -30,7 +30,7 @@ class Model(nn.Module):
             
             if hasattr(child, 'setState'):
                 if state2 is None:
-                    child.setState(state[prefix + name])
+                    child.setState(state.get(prefix + name, None))
                 else:
                     # print((state[prefix + name] - state2[prefix + name]).sum())
                     child.setState(torch.lerp(state[prefix + name], state2[prefix + name], mix))

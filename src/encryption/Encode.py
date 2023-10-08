@@ -37,11 +37,47 @@ model.forward([187])
 
 ########################################################################################################
 
-ctx = tokenizer.encode(context)
+# ctx = tokenizer.encode(context)
 
-model.forward(ctx)
-init_state = model.getState()
-for x in init_state.keys():
-    init_state[x] = init_state[x].to(torch.bfloat16)
+# model.forward(ctx)
+# init_state = model.getState()
+# for x in init_state.keys():
+#     init_state[x] = init_state[x].to(torch.bfloat16)
 
-save_file(init_state, "secret.safetensors")
+# save_file(init_state, "secret.safetensors")
+
+def encode(text):
+    inpute = "message=[" + text + "]"
+    context = f"### Instruction:\nRepeat the input exactly \n### Input:\n{inpute} \n### Response:"
+    ctx = tokenizer.encode(context)
+    model.resetState()
+    model.forward(ctx)
+    init_state = model.getState()
+    # delete all values where key has "shift" in it
+    for x in list(init_state.keys()):
+        if "shift" in x:
+            del init_state[x]
+    
+    # stack all values
+    init_state = torch.stack(list(init_state.values()))
+
+    # return init_state
+    return init_state
+    
+def decode(state, max_len=100):
+    # load state
+    model.setState(state)
+    # get output
+    logits = model.forward([187])
+    logits[0] = -99
+    outputs = []
+
+    while logits.argmax().item() != 0 and len(outputs) < max_len:
+        outputs.append(logits.argmax().item())
+        logits = model.forward([logits.argmax().item()])
+        # print(logits.argmax())
+    # return output
+    try:
+        return tokenizer.decode(outputs)
+    except:
+        return "Error: "

@@ -37,22 +37,19 @@ class experimentalBlock(nn.Module):
         self.args = args
         self.layer_id = layer_id
         self.lastlayer = args.n_layer-1
-        from .modules.FFN import Feed_Forward
+
         if layer_id == 0:
             self.ln0 = nn.LayerNorm(args.n_embd)
-        
-        if layer_id == self.lastlayer:
-            self.ffn = Feed_Forward(args, layer_id)
 
+        self.ln1 = nn.LayerNorm(args.n_embd)
+        self.ln2 = nn.LayerNorm(args.n_embd)    
     
+        from .modules.FFN import Feed_Forward
+        from .modules.LongMem import Long_Mem, RWKVv4Att
+        from .modules.ShortMem import Short_Mem, WaveNet_Mem
         
-        from .modules.RotaryMemory import MatForward
-        from .modules.LongMem import Long_Mem
-        
-        blockformat = [Long_Mem, Long_Mem]
-        psz = self.layer_id % len(blockformat)
-        
-        self.blk = blockformat[psz](args, layer_id)
+        self.ffn = Feed_Forward(args, layer_id) if layer_id == self.lastlayer else Long_Mem(args, layer_id)
+        self.att = Long_Mem(args, layer_id)
         
   
     def forward(self, x):
@@ -60,11 +57,12 @@ class experimentalBlock(nn.Module):
         if self.layer_id == 0:
             x = self.ln0(x)
 
-        x = self.blk(x).relu().sigmoid().pow(4) + x
-
-        if self.layer_id == self.lastlayer:
-            x = self.ffn(x) + x
+        x = self.att(self.ln1(x)) + x
+        x = self.ffn(self.ln2(x)) + x
         return x
+
+        
+ 
 
 
 from .RNN import LightningModel
