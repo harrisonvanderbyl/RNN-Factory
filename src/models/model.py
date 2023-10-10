@@ -71,6 +71,12 @@ from .RNN import LightningModel
 class Experimental(LightningModel):
     def __init__(self, args, Block=experimentalBlock):
         super().__init__()
+
+        try:
+            args.linear = args.linear
+        except:
+            args.linear = nn.Linear
+
         try:
             self.batches = args.micro_bsz
         except:
@@ -94,7 +100,7 @@ class Experimental(LightningModel):
             modelpath = None
         
         if modelpath:
-            file = torch.load(modelpath, map_location="cuda")
+            file = torch.load(modelpath, map_location="cpu", mmap=True)
             keys = list(file.keys())
             print("keys", keys)
             # remove _orig_mod from keys for compatibility with torch.compile
@@ -140,11 +146,11 @@ class Experimental(LightningModel):
         self.emb = nn.Embedding(args.vocab_size, args.n_embd)
         self.blocks = nn.Sequential(*[Block(args, i) for i in range(args.n_layer)])
         self.ln_out = nn.LayerNorm(args.n_embd)
-        self.head = nn.Linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
+        self.head = args.linear(args.n_embd, args.vocab_size, bias=False, dtype=torch.bfloat16)
 
         
         if file:
-            self.load_state_dict(file)
+            self.load_state_dict(file, assign=True)
 
 
 

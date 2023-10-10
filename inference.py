@@ -17,9 +17,14 @@ args = types.SimpleNamespace()
 
 
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/training/pipeline/models/5.pth'
-
+# MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/training/pipeline/models/5.pth'
+MODEL_NAME = '/media/harrison/backup/7B.pth'
 args.load_model = MODEL_NAME
+
+
+from src.models.modules.Linear import InferenceLinear, Quantized, Linear
+
+args.linear = Quantized
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 
@@ -28,7 +33,11 @@ model = RWKV_v5(args)
 from src.tokenizer import neox, world
 tokenizer = world
 
-context =   '\n### Instruction:\nWrite a c++ program to filter an array of integers into only even numbers \n### Response:\n'
+context =   '''
+### Instruction:
+Tell me what a raven is
+### Response:
+'''
 
 doGreedy = False
 
