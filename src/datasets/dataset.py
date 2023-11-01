@@ -130,9 +130,9 @@ class MyDataset(Dataset):
 
     def __getitem__(self, idx):
         args = self.args
-        rank = self.global_rank
-        epoch = self.real_epoch
-        world_size = self.world_size
+        # rank = self.global_rank
+        # epoch = self.real_epoch
+        # world_size = self.world_size
         # print(f"epoch {epoch} idx {idx} rank {rank}/{world_size}")
         if args.data_type == "stream":
             

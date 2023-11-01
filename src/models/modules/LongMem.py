@@ -185,7 +185,7 @@ class Long_Mem(StateModule):
         r, k, v, g = self.jit_func(x)
 
         if self.training:
-            x = self.WKV_5.apply(B, T, C, H, r, k, v, self.time_decay, self.time_faaaa)
+            x = self.WKV_5.apply(B, T, C, H, r, k, v, self.time_decay.bfloat16(), self.time_faaaa.bfloat16())
         else:
             state = self.getState().to(x.device, torch.float32)
             x, state = self.RWKV_5.apply(B, T, C, H, state, r.float(), k.float(), v.float(), self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.float().reshape(self.n_head, -1, 1))
