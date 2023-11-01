@@ -177,6 +177,19 @@ class Long_Mem(StateModule):
         x = self.ln_x(x / self.head_size_divisor).view(B, T, C)
         x = self.output(x * g)
         return x
+    
+    def torchwise(self, B, T, C, H, s, r, k, v, w, u):
+        
+        at = k@v
+        out = (u*r)@at
+        
+        for t in range(T):
+   
+            out[:,t] += r[:,t] @ s
+            s *= w
+            s += at[:,t]
+            
+        return out.reshape(B, T, C), s
 
     def forward(self, x):
         B, T, C = x.size()
@@ -188,7 +201,7 @@ class Long_Mem(StateModule):
             x = self.WKV_5.apply(B, T, C, H, r, k, v, self.time_decay.bfloat16(), self.time_faaaa.bfloat16())
         else:
             state = self.getState().to(x.device, torch.float32)
-            x, state = self.RWKV_5.apply(B, T, C, H, state, r.float(), k.float(), v.float(), self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.float().reshape(self.n_head, -1, 1))
+            x, state = self.torchwise(B, T, C, H, state, r.view(B, T, H, 1, -1).float(), k.view(B, T, H, -1, 1).float(), v.view(B, T, H, 1, -1).float(), self.time_decay.double().exp().neg().exp().reshape(1,self.n_head,-1,1).float(), self.time_faaaa.reshape(1,1,self.n_head, 1, -1).float())
             self.setState(state)
         x = x.reshape(B, T, C)
         out = self.jit_func_2(x.to(g.dtype), g)

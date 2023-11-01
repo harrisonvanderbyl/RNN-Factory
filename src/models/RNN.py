@@ -20,7 +20,11 @@ class Model(nn.Module):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._for = self.forward
-        self.forward = self.state_forward
+        withPipeline = self.withPipeline
+        if withPipeline:
+            self.forward = self.state_forward
+        else:
+            self.forward = lambda *args, **kwargs: self.state_forward(*args,returnState=False,flattenbatch=False,**kwargs)
         
     def recursiveSetState(self, module, state=None, prefix='', state2=None, mix=0.0):
         if state is None:
@@ -66,14 +70,22 @@ class Model(nn.Module):
     def resetState(self):
         self.recursiveResetState(self)
 
-    def state_forward(self, *args, state=None, returnState=False, allLogits=False, **kwargs):
+    def state_forward(self, *args, state=-1,flattenbatch=True, returnState=True, full_output=False, **kwargs):
         if state is not None:
-            self.recursiveSetState(self, state)
+            if state != -1:
+
+                self.recursiveSetState(self, state)
+        else:
+            self.resetState()
         logits = self._for(*args, **kwargs)
 
-        if not allLogits and not self.training:
+        if not full_output and not self.training:
+            
             logits = logits[:,-1,:].squeeze()
+            
         if returnState:
+            if flattenbatch:
+                logits = logits.squeeze()
             return logits, self.recursiveGetState(self)
         else:
             return logits

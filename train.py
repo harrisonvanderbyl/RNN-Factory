@@ -68,10 +68,10 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_save", default=5, type=int)  # save the model every [epoch_save] "epochs"
 
     parser.add_argument("--micro_bsz", default=4, type=int)  # micro batch size (batch size per GPU)
-    parser.add_argument("--n_layer", default=12, type=int)
-    parser.add_argument("--n_embd", default=2048, type=int)
+    parser.add_argument("--n_layer", default=6, type=int)
+    parser.add_argument("--n_embd", default=256, type=int)
     parser.add_argument("--dim_att", default=0, type=int)
-    parser.add_argument("--dim_ffn", default=1024*3, type=int)
+    parser.add_argument("--dim_ffn", default=1024, type=int)
     parser.add_argument("--pre_ffn", default=0, type=int)  # replace first att layer by ffn (sometimes better)
     parser.add_argument("--head_qk", default=0, type=int)  # my headQK trick
     parser.add_argument("--tiny_att_dim", default=0, type=int)  # tiny attention dim
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     parser.add_argument("--accelerator", default="auto", type=str)  # cpu / gpu / ddp / ddp_find_unused_parameters_false
     parser.add_argument("--devices", default=1, type=int)  # number of GPUs
     parser.add_argument("--precision", default="bf16", type=str)  # fp32 / tf32 / fp16 / bf16
-    parser.add_argument("--strategy", default="deepspeed", type=str)  # ddp / ddp_find_unused_parameters_false / deepspeed_stage_1 / deepspeed_stage_2 / deepspeed_stage_2_offload / deepspeed_stage_3 / deepspeed_stage_3_offload
+    parser.add_argument("--strategy", default="ddp", type=str)  # ddp / ddp_find_unused_parameters_false / deepspeed_stage_1 / deepspeed_stage_2 / deepspeed_stage_2_offload / deepspeed_stage_3 / deepspeed_stage_3_offload
     
     #num nodes
     parser.add_argument("--num_nodes", default=1, type=int)  # number of nodes

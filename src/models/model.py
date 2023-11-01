@@ -69,7 +69,11 @@ from .RNN import LightningModel
 
 
 class Experimental(LightningModel):
-    def __init__(self, args, Block=experimentalBlock):
+    def __init__(self, args:SimpleNamespace, Block=experimentalBlock):
+        try:
+            self.withPipeline = args.withPipeline
+        except:
+            self.withPipeline = False
         super().__init__()
 
         try:
@@ -100,7 +104,7 @@ class Experimental(LightningModel):
             modelpath = None
         
         if modelpath:
-            file = torch.load(modelpath, map_location="cpu", mmap=True)
+            file = torch.load(modelpath, map_location="cpu")
             keys = list(file.keys())
             print("keys", keys)
             # remove _orig_mod from keys for compatibility with torch.compile
@@ -150,7 +154,7 @@ class Experimental(LightningModel):
 
         
         if file:
-            self.load_state_dict(file, assign=True)
+            self.load_state_dict(file)
 
 
 
