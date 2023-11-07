@@ -176,14 +176,11 @@ class Experimental(LightningModel):
 
 
         args = self.args
-        idx = idx.to(self.device)
+        idx = idx.to(self.emb.weight.device)
 
         
         x = self.emb(idx)
-        if args.grad_cp == 1:
-            return deepspeed.checkpointing.checkpoint(self.blocks, x)
-        else:
-            x = self.blocks(x) # residual
+        x = self.blocks(x) 
         x = self.ln_out(x)
         x = self.head(x)
         return x

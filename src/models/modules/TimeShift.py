@@ -12,12 +12,15 @@ class TimeShift(StateModule):
        
     def forward(self, x):
  
-        xapp = torch.cat([self.getState().to(x.device, x.dtype), x], dim=-2)
+        xapp = torch.cat([self.getState(x).to(x.device, x.dtype), x], dim=-2)
         self.setState(xapp[:,-self.shift:])
         return xapp[:,:-self.shift,:]
     
-    def getState(self):
+    def getState(self,x):
         if self.state is None:
-            self.initState(self.batch, self.shift, self.dims)
+            self.initState(x.shape[0], self.shift, self.dims)
         return self.state.clone()
+    
+    def resetState(self):
+        self.state = None
     

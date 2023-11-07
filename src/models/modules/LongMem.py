@@ -76,7 +76,7 @@ class Long_Mem(StateModule):
         HEAD_SIZE = args.dim_att // self.n_head
         if wkv5_cuda is None:
             wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                            verbose=True, extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
                 
         class WKV_5(torch.autograd.Function):
         
@@ -172,24 +172,20 @@ class Long_Mem(StateModule):
 
     def jit_func_2(self, x, g):
         B, T, C = x.size()
-        x = x.view(B * T, C)
+        x = x.reshape(B * T, C)
         
         x = self.ln_x(x / self.head_size_divisor).view(B, T, C)
         x = self.output(x * g)
         return x
     
-    def torchwise(self, B, T, C, H, s, r, k, v, w, u):
-        
-        at = k@v
-        out = (u*r)@at
-        
-        for t in range(T):
-   
-            out[:,t] += r[:,t] @ s
-            s *= w
-            s += at[:,t]
-            
-        return out.reshape(B, T, C), s
+    def torchwise(self, B:int, T:int, C:int, H:int, s, r, k, v, w, u):
+        rm = r.transpose(0,1).contiguous()
+        km = k.transpose(0,1).contiguous()
+        vm = v.transpose(0,1).contiguous()
+        out = torch.zeros(T,B, H, C//H).cpu()
+        wkv5_cuda.forward_cpu(B,T,C,H, s, rm, km, vm, w, u, out)
+                    
+        return out.transpose(0,1).reshape(B, T, C), s
 
     def forward(self, x):
         B, T, C = x.size()
@@ -200,14 +196,22 @@ class Long_Mem(StateModule):
         if self.training:
             x = self.WKV_5.apply(B, T, C, H, r, k, v, self.time_decay.bfloat16(), self.time_faaaa.bfloat16())
         else:
-            state = self.getState().to(x.device, torch.float32)
-            x, state = self.torchwise(B, T, C, H, state, r.view(B, T, H, 1, -1).float(), k.view(B, T, H, -1, 1).float(), v.view(B, T, H, 1, -1).float(), self.time_decay.double().exp().neg().exp().reshape(1,self.n_head,-1,1).float(), self.time_faaaa.reshape(1,1,self.n_head, 1, -1).float())
+            state = self.getState(x).to(x.device, torch.float32)
+            x, state = self.torchwise(B, T, C, H, state, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
             self.setState(state)
         x = x.reshape(B, T, C)
         out = self.jit_func_2(x.to(g.dtype), g)
         return out
+    
+    def getState(self,x):
+        st = super().getState()
+        if st is None:
+            return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size)
+        
+        return st
   
-
+    def resetState(self):
+        self.state = None
 
 
 
