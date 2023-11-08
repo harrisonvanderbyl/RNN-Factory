@@ -80,7 +80,7 @@ def runmodel(tokens, streams):
   
 from tqdm import tqdm
 stats = [
-    runmodel(100,int(1 if i == 0 else i*10)) for i in tqdm(range(0,10))
+    runmodel(100,int(1 if i == 0 else i*8)) for i in tqdm(range(0,10))
 ]
 
 # display graph
@@ -89,7 +89,7 @@ plt.plot(stats)
 plt.ylabel('time/100tokens')
 plt.xlabel('streams')
 plt.title('RWKVv5 multi-stream inference')
-plt.xticks(range(0,10),[str(int(1 if i == 0 else i*10)) for i in range(0,10)])
+plt.xticks(range(0,10),[str(int(1 if i == 0 else i*8)) for i in range(0,10)])
 plt.ylim(bottom=0)
 plt.show()
 

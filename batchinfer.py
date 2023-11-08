@@ -58,7 +58,7 @@ tokeqs = [tokenizer.encode("### Question\n"+q+"\n### Answer:\n") for q in questi
 ]
 
 import gradio as gr
-blocks = 5
+blocks = 100
 
 with gr.Blocks() as demo:
     # slider followed by 5 non editable text boxes
@@ -73,9 +73,9 @@ with gr.Blocks() as demo:
             model.resetState()
             timee = time.clock_gettime(0)
 
-            logits = model.forward(tokeqs)
+            logits = model.forward(tokeqs * (blocks // 5))
             print(logits.shape)
-            newtokens = [[],[],[],[],[]]
+            newtokens = [[]] * blocks
             for i in range(val):
                 print(i)
                 toks = [torch.argmax(logits[j],dim=-1).item() for j in range(blocks)]
