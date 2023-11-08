@@ -1,8 +1,8 @@
 ########################################################################################################
 # The RWKV Language Model - https://github.com/BlinkDL/RWKV-LM
 ########################################################################################################
-from src.tokenizer import neox, world
-tokenizer = world
+from src.tokenizer import neox, world, racoon
+tokenizer = racoon
 import numpy as np
 import types, time, gc
 import torch
