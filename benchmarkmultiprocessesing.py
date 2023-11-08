@@ -33,8 +33,8 @@ top_p = 0.9
 model = model.eval()
 model = model.requires_grad_(False)
 # model = model.float()
-model = model.float()
-model = model.cpu()
+model = model.bfloat16()
+model = model.cuda()
 
 
 
@@ -66,6 +66,7 @@ def runmodel(tokens, streams):
         toks = [torch.argmax(logits[j],dim=-1).item() for j in range(streams)]
         newtokens = [newtokens[j] + [toks[j]] for j in range(streams)]
         logits = model.forward([[u] for u in toks])
+        
     otime = time.clock_gettime(0)-timee
     # gc
     torch.cuda.empty_cache()
@@ -79,14 +80,17 @@ def runmodel(tokens, streams):
   
 from tqdm import tqdm
 stats = [
-    runmodel(100,i*16) for i in tqdm(range(1,8))
+    runmodel(100,int(1 if i == 0 else i*10)) for i in tqdm(range(0,10))
 ]
 
 # display graph
 import matplotlib.pyplot as plt
 plt.plot(stats)
-plt.ylabel('time')
+plt.ylabel('time/100tokens')
 plt.xlabel('streams')
+plt.title('RWKVv5 multi-stream inference')
+plt.xticks(range(0,10),[str(int(1 if i == 0 else i*10)) for i in range(0,10)])
+plt.ylim(bottom=0)
 plt.show()
 
 # display table

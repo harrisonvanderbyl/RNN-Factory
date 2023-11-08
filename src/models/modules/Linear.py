@@ -1,5 +1,6 @@
 import torch
 from torch.nn import Linear
+from bitsandbytes import matmul
 
 class InferenceLinear(torch.nn.Module):
     def __init__(self, *args, **kwargs):
@@ -7,11 +8,11 @@ class InferenceLinear(torch.nn.Module):
         self.weight = None
     def forward(self, x):
         # replicate nn.linear
-        return  x @ self.weight.t()
+        return  x @ self.weight
     
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         key = list(state_dict.keys())[0]
-        self.weight = state_dict[key]
+        self.weight = torch.nn.Parameter(state_dict[key].t())
 
 
 class Quantized(torch.nn.Module):
@@ -29,9 +30,9 @@ class Quantized(torch.nn.Module):
     def chunkQuantizeMatrix(self, x):
         
         xx = self.QuantizeMatrix(x.t(), 0)
-        toset = xx[0].to(dtype=torch.uint8)
-        mrange = xx[1]
-        offset = xx[2]
+        toset = xx[0].t().to(dtype=torch.uint8, device="cuda")
+        mrange = xx[1].to(device="cuda")
+        offset = xx[2].to(device="cuda")
         return toset, mrange, offset
     
     def QuantizeMatrix(self, xx, i):
@@ -56,7 +57,11 @@ class Quantized(torch.nn.Module):
         yv = y.reshape(-1,C).mv(self.offset.to(dtype=y.dtype))
         yv = yv.reshape(B,-1,1).float()
         a = (y*self.range.to(y.dtype)).float()
+
+        
+        m = a @ self.weight.t().float()
+        
     
-        yv += a @ self.weight.float()
+        yv = yv + m
         
         return yv.to(dtype=y.dtype)

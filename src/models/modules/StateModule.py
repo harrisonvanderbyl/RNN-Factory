@@ -13,12 +13,12 @@ class StateModule(nn.Module):
             if state is None:
                 self.state = None
             else:
-                self.state = state.clone().detach()
+                self.state = state
 
     def getState(self):
         if self.state is None:
             return None
-        return self.state.clone()
+        return self.state
     
     def resetState(self):
         self.initState(*self.state.shape)
