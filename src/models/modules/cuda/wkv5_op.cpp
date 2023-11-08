@@ -44,14 +44,36 @@ void backward(int64_t B, int64_t T, int64_t C, int64_t H, torch::Tensor &r, torc
     #pragma message("AVX-512 is supported")
 #else
   // Fallback to AVX2 if AVX-512 is not supported
-  #define SIMD_WIDTH 8
-  #define LOAD(x) _mm256_load_ps(x)
-  #define STORE(x, y) _mm256_store_ps(x, y)
-  #define SET1(x) _mm256_set1_ps(x)
-  #define MULTIPLY(x, y) _mm256_mul_ps(x, y)
-  #define MULTADD(x, y, z) _mm256_fmadd_ps(x, y, z)
-  // print out the SIMD width
-    #pragma message("AVX-512 is not supported")
+  #ifdef __AVX2__
+    #define SIMD_WIDTH 8
+    #define LOAD(x) _mm256_load_ps(x)
+    #define STORE(x, y) _mm256_store_ps(x, y)
+    #define SET1(x) _mm256_set1_ps(x)
+    #define MULTIPLY(x, y) _mm256_mul_ps(x, y)
+    #define MULTADD(x, y, z) _mm256_fmadd_ps(x, y, z)
+    // print out the SIMD width
+        #pragma message("AVX-512 is not supported")
+
+  #else
+    #ifdef __ARM_NEON__  // Check if ARM Neon is supported
+        #define SIMD_WIDTH 4  // Assuming Neon has a width of 4
+        #define LOAD(x) vld1q_f32(x)
+        #define STORE(x, y) vst1q_f32(x, y)
+        #define SET1(x) vdupq_n_f32(x)
+        #define MULTIPLY(x, y) vmulq_f32(x, y)
+        #define MULTADD(x, y, z) vfmaq_f32(z, x, y)
+        // print out the SIMD width
+        #pragma message("ARM Neon is supported")
+    #else
+        #pragma message("No SIMD is supported")
+        #define SIMD_WIDTH 1
+        #define LOAD(x) x
+        #define STORE(x, y) x = y
+        #define SET1(x) x
+        #define MULTIPLY(x, y) x * y
+        #define MULTADD(x, y, z) x * y + z
+
+
 #endif
 
 

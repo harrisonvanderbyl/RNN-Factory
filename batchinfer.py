@@ -34,7 +34,7 @@ model = model.eval()
 model = model.requires_grad_(False)
 # model = model.float()
 model = model.bfloat16()
-model = model.cuda()
+model = model.cpu()
 
 
 
@@ -58,7 +58,7 @@ tokeqs = [tokenizer.encode("### Question\n"+q+"\n### Answer:\n") for q in questi
 ]
 
 import gradio as gr
-blocks = 100
+blocks = 500
 
 with gr.Blocks() as demo:
     # slider followed by 5 non editable text boxes
