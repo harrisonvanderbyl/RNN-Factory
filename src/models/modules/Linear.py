@@ -1,6 +1,5 @@
 import torch
 from torch.nn import Linear
-from bitsandbytes import matmul
 
 class InferenceLinear(torch.nn.Module):
     def __init__(self, *args, **kwargs):
@@ -20,19 +19,34 @@ class Quantized(torch.nn.Module):
         super().__init__()
         
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        key = list(state_dict.keys())[0]
-        self.weight, self.range, self.offset = self.chunkQuantizeMatrix(state_dict[key])
-        self.range = self.range
-        self.offset = self.offset
-        self.M = self.weight.shape[0]
-        self.N = self.weight.shape[1]
+        if "range" in ", ".join(state_dict.keys()):
+            print("Loading quantized matrix...")
+            rangekey = [x for x in state_dict.keys() if "range" in x][0]
+            offsetkey = [x for x in state_dict.keys() if "offset" in x][0]
+            weightkey = [x for x in state_dict.keys() if "weight" in x][0]
+            self.range = state_dict[rangekey].float().cuda()
+            self.offset = state_dict[offsetkey].float().cuda()
+            self.weight = state_dict[weightkey].t().cuda()
+            self.M = self.weight.shape[1]
+            self.N = self.weight.shape[0]
+        else:
+            key = list(state_dict.keys())[0]
+            self.weight, self.range, self.offset = self.chunkQuantizeMatrix(state_dict[key])
+            self.weight = torch.nn.Parameter(self.weight, requires_grad=False)
+            self.range = torch.nn.Parameter(self.range)
+            self.offset = torch.nn.Parameter(self.offset)
+            self.M = self.weight.shape[0]
+            self.N = self.weight.shape[1]
 
     def chunkQuantizeMatrix(self, x):
+
+        print("Quantizing matrix...")
         
         xx = self.QuantizeMatrix(x.t(), 0)
         toset = xx[0].t().to(dtype=torch.uint8, device="cuda")
-        mrange = xx[1].to(device="cuda")
-        offset = xx[2].to(device="cuda")
+        mrange = xx[1].float().to(device="cuda")
+        offset = xx[2].float().to(device="cuda")
+        print("Memory Used: ", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
         return toset, mrange, offset
     
     def QuantizeMatrix(self, xx, i):
@@ -53,15 +67,13 @@ class Quantized(torch.nn.Module):
 
     def forward(self, y):
         B, T, C = y.shape
+
+        out = torch.zeros(B, T, self.M, device="cuda").float()
+
+        # int64_t N, int64_t M, torch::Tensor &x, torch::Tensor &w, torch::Tensor &y, torch::Tensor &r, torch::Tensor &o, int64_t offset, int64_t tokenlength
         
-        yv = y.reshape(-1,C).mv(self.offset.to(dtype=y.dtype))
-        yv = yv.reshape(B,-1,1).float()
-        a = (y*self.range.to(y.dtype)).float()
+        torch.ops.wkv5.mm8_one(self.N, self.M, y.float(), self.weight, out, self.range, self.offset, 0, T)
+
 
         
-        m = a @ self.weight.t().float()
-        
-    
-        yv = yv + m
-        
-        return yv.to(dtype=y.dtype)
+        return out.to(dtype=y.dtype)

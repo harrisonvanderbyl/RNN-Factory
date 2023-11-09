@@ -4,6 +4,10 @@
 typedef at::BFloat16 bf16;
 typedef at::Half fp16;
 typedef float fp32;
+#define MM8_ONE_JSPLIT 16
+#define MM8_ONE_TILE 256
+#define EMBSPLIT 256
+#define EMBBLOCK 16
 
 template <typename F>
 __global__ void kernel_forward(const int B, const int T, const int C, const int H,
@@ -129,6 +133,51 @@ __global__ void kernel_forward_inference(const int B, const int T, const int C, 
     #pragma unroll
     for (int j = 0; j < _N_; j++)
         _state[j] = state[j];
+}
+
+template <typename DTYPE>
+__global__ void kernelc_mm8_one(
+    const unsigned long long N, const unsigned long long M,
+    const DTYPE *__restrict__ const x,
+    const uint8_t *__restrict__ const w, const unsigned long long w_stride,
+    float *__restrict__ const y,
+    const float *__restrict__ const r,
+    const float *__restrict__ const o,
+    const unsigned long long offset,
+    unsigned long long tokenlength)
+{
+
+    for (unsigned long long token = 0; token < tokenlength; token++)
+    {
+        const unsigned long long k = blockIdx.y * blockDim.y + threadIdx.y;
+        const unsigned long long j0 = min(N, blockIdx.x * ((N + MM8_ONE_JSPLIT - 1) / MM8_ONE_JSPLIT));
+        const unsigned long long j1 = min(N, (blockIdx.x + 1) * ((N + MM8_ONE_JSPLIT - 1) / MM8_ONE_JSPLIT));
+
+        if (k < M)
+        {
+            float y_local = 0;
+            for (unsigned long long j = j0; j < j1; ++j)
+            {
+                y_local += float(x[j + N * token]) * ((w[j * w_stride + k + offset * N * M] * r[j + offset * N] + o[j + offset * N]));
+            }
+            atomicAdd(reinterpret_cast<float *>(&y[k + M * token]), *reinterpret_cast<float *>(&y_local));
+        }
+    }
+}
+
+void cudac_mm8_one(unsigned long long N, unsigned long long M,
+                   float *x,
+                   uint8_t *w, unsigned long long w_stride,
+                   float *y,
+                   float *r,
+                   float *o,
+                   unsigned long long offset,
+                     unsigned long long tokenlength)
+{
+    dim3 blockSize(1, MM8_ONE_TILE);
+    dim3 gridSize(MM8_ONE_JSPLIT, (M + blockSize.y - 1) / blockSize.y);
+    kernelc_mm8_one<<<gridSize, blockSize>>>(
+        N, M, x, w, w_stride, y, r, o, offset, tokenlength);
 }
 
 void cuda_forward_bf16(int B, int T, int C, int H, float *state, bf16 *r, bf16 *k, bf16 *v, float *w, bf16 *u, bf16 *y)
