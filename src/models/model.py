@@ -11,8 +11,7 @@ import torch.nn as nn
 
 from src.models.modules.Linear import InferenceLinear
 
-if importlib.util.find_spec('deepspeed'):
-    import deepspeed
+
 
 # from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
 
@@ -164,7 +163,7 @@ class Experimental(LightningModel):
 
 
 
-    def forward(self, idx):
+    def forward(self, idx, state):
         # if idx is list, make tensor
         if isinstance(idx, list):
             idx = torch.tensor(idx)
@@ -183,10 +182,10 @@ class Experimental(LightningModel):
 
         
         x = self.emb(idx)
-        x = self.blocks(x) 
+        x, state = self.blocks((x, state)) 
         x = self.ln_out(x)
         x = self.head(x)
-        return x
+        return x, state
 
         
     

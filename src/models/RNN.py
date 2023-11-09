@@ -16,10 +16,7 @@ class Model(nn.Module):
         super().__init__(*args, **kwargs)
         self._for = self.forward
         withPipeline = self.withPipeline
-        if withPipeline:
-            self.forward = self.state_forward
-        else:
-            self.forward = lambda *args, **kwargs: self.state_forward(*args,returnState=False,flattenbatch=False,**kwargs)
+        self.forward = lambda args, state, **kwargs: self.state_forward(args,state=state,returnState=True,flattenbatch=False,**kwargs)
         
     def recursiveSetState(self, module, state=None, prefix='', state2=None, mix=0.0):
         if state is None:
@@ -42,7 +39,7 @@ class Model(nn.Module):
         # recursively go through all the modules and if it has a getState method, call it and add the result to the state dict
         for name, child in module.named_children():
             if hasattr(child, 'getState'):
-                state[prefix + name] = child.getState().clone()
+                state[prefix + name] = child.state.clone() if isinstance(child.state, torch.Tensor) else child.state
             
             self.recursiveGetState(child, state, prefix + name + '.')
 
@@ -65,25 +62,20 @@ class Model(nn.Module):
     def resetState(self):
         self.recursiveResetState(self)
 
-    def state_forward(self, *args, state=-1,flattenbatch=True, returnState=True, full_output=False, **kwargs):
-        if state is not None:
-            if state != -1:
-
-                self.recursiveSetState(self, state)
-        else:
-            self.resetState()
-        logits = self._for(*args, **kwargs)
-
-        if not full_output and not self.training:
+    def state_forward(self, *args, state=-1,flattenbatch=False, returnState=True, full_output=False, **kwargs):
+        if state is None:
             
-            logits = logits[:,-1,:].squeeze()
+            state={}
+        print(args)
+        logits, state = self._for(*args,state=state, **kwargs)
+        print("done model in")
+
+        if not full_output and not self.training :
             
-        if returnState:
-            if flattenbatch:
-                logits = logits.squeeze()
-            return logits, self.recursiveGetState(self)
-        else:
-            return logits
+            logits = logits[:,-1,:]
+            
+        return logits, state
+        
 
     
 class L2Wrap(torch.autograd.Function):

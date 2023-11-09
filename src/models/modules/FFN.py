@@ -24,14 +24,15 @@ class Feed_Forward(nn.Module):
         self.value = args.linear(args.dim_ffn, args.n_embd, bias=False, dtype=torch.bfloat16)
 
     
-    def forward(self, x):
-        xx = self.time_shift(x)
+    def forward(self, x, state):
+        xx, stateout = self.time_shift(x,state.get(f"blocks.{self.layer_id}.ffn.time_shift",None)) # Mix x with the previous timestep to produce xk, xv, xr
+        state[f"blocks.{self.layer_id}.att.time_shift"] = stateout
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
         k = self.key(xk)
         k = torch.relu(k) ** 2
         kv = self.value(k)
-        return torch.sigmoid(self.receptance(xr)) * kv
+        return torch.sigmoid(self.receptance(xr)) * kv, state
 # Wavenet ffn
 class WNFFN(Feed_Forward):
     def __init__(self, args, layer_id):

@@ -111,10 +111,11 @@ class Long_Mem(StateModule):
         self.RWKV_5 = RWKV_5
 
 
-    def jit_func(self, x):
+    def jit_func(self, x,state):
         B, T, C = x.size()
 
-        xx = self.time_shift(x) # Mix x with the previous timestep to produce xk, xv, xr
+        xx, stateout = self.time_shift(x,state.get(f"blocks.{self.layer_id}.att.time_shift",None)) # Mix x with the previous timestep to produce xk, xv, xr
+        state[f"blocks.{self.layer_id}.att.time_shift"] = stateout
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
         xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
@@ -125,7 +126,7 @@ class Long_Mem(StateModule):
         v = self.value(xv)
         g = F.silu(self.gate(xg))
 
-        return r, k, v, g
+        return r, k, v, g, state
 
     def jit_func_2(self, x, g):
         B, T, C = x.size()
@@ -144,25 +145,25 @@ class Long_Mem(StateModule):
                     
         return out.transpose(0,1).reshape(B, T, C), s
 
-    def forward(self, x):
+    def forward(self, x, state):
         B, T, C = x.size()
         H = self.n_head
 
-        r, k, v, g = self.jit_func(x)
+        r, k, v, g, state = self.jit_func(x,state)
 
-        state = self.getState(x).to(x.device, torch.float32)
-        x, state = self.torchwise(B, T, C, H, state, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
-        self.setState(state)
+        statein = self.getState(state.get(f"blocks.{self.layer_id}.att",None),x)
+        x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
+        state[f"blocks.{self.layer_id}.att"] = stateout
         x = x.reshape(B, T, C)
         out = self.jit_func_2(x.to(g.dtype), g)
-        return out
+        return out,state
     
-    def getState(self,x):
-        st = super().getState()
-        if st is None:
+    def getState(self,state, x):
+        if state is None:
+            print("NewState")
             return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size)
         
-        return st
+        return state
   
     def resetState(self):
         self.state = None

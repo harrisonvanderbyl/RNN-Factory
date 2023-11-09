@@ -22,14 +22,16 @@ class v5Block(nn.Module):
         self.att = Long_Mem(args, layer_id)
         
   
-    def forward(self, x):
-
+    def forward(self, xin):
+        x, state = xin
         if self.layer_id == 0:
             x = self.ln0(x)
 
-        x = self.att(self.ln1(x)) + x
-        x = self.ffn(self.ln2(x)) + x
-        return x
+        xo, state = self.att(self.ln1(x), state)
+        x += xo
+        xo, state = self.ffn(self.ln2(x),state)
+        x += x
+        return x, state
 
 
 class RWKV_v5(Experimental):

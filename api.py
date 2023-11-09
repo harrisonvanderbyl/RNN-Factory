@@ -11,19 +11,15 @@ import json
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
 
-#os.environ["CUDA_VISIBLE_DEVICES"] = ''
-os.environ["RWKV_JIT_ON"] = '1'
-os.environ["RWKV_CUDA_ON"] = '1' # if '1' then use CUDA kernel for seq mode (much faster)
-
-torch.set_num_threads(4)
+torch.set_num_threads(60)
 
 from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
-args.load_model = '7B.pth'
-model = RWKV_v5(args)
+args.load_model = '/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
 args.withPipeline = True
+model = RWKV_v5(args)
 models = [
     model,
 ]
@@ -100,6 +96,66 @@ def sample_logits(logits, temperature=1.0, top_p=0.85, top_k=0):
             probs = probs ** (1.0 / temperature)
         out = torch.multinomial(probs, num_samples=1)[0]
         return int(out)
+    
+thingsToDo = []
+
+def mergestates(states):
+    keys = states[0].keys()
+    return {key: torch.cat([state[key] for state in states], dim=0) for key in keys}
+
+def splitstates(state):
+    return [{key: state[key][i:i+1] for key in state.keys()} for i in range(len(state[list(state.keys())[0]]))]
+
+def runModel():
+    while True:
+        if len(thingsToDo) > 0:
+            print("Concurrent:", thingsToDo.__len__())
+            thingsToDo2 = thingsToDo.copy()
+            thingsToDo.clear()
+            tokens = [[tok] for tok, state, do in thingsToDo2]
+            
+            state = mergestates([state for tok, state, do in thingsToDo2])
+
+            print("MergeShapes Done: ")
+            out, state = model.forward(tokens, state)
+
+            print("ShapeOut: ",out.shape)
+
+            states = splitstates(state)
+
+            print("SplitShapes Done: ")
+
+            [do(out[i], states[i]) for i, ( tok, state, do) in enumerate(thingsToDo2)]
+            print("Done Concurrent")
+        else:
+            time.sleep(0.000001)
+
+async def addToStack(inp):
+    tok, state = inp
+
+    class backfix:
+        def __init__(self, tok, state):
+            self.tok = tok
+            self.state = state
+            self.done = False
+
+        def setTok(self, logits, state):
+            self.logits = logits
+            self.state = state
+            self.done = True
+    
+    infrequest = backfix(tok, state)
+
+    do = lambda logits,newstate: infrequest.setTok(logits, newstate)
+
+    
+    thingsToDo.append((tok,state,do))
+
+    while not infrequest.done:
+        await asyncio.sleep(0.000001)
+
+    return infrequest.logits, infrequest.state
+
         
 async def evaluate(
     prompt,
@@ -129,7 +185,15 @@ async def evaluate(
     out_str = ''
     occurrence = {}
     for i in range(int(token_count)):
-        out, state = model.forward(pipeline.encode(ctx)[-ctx_limit:] if i == 0 else [token], state)
+        if i == 0:
+            out, state = model.forward([pipeline.encode(ctx)[-ctx_limit:]], state)
+            out = out[0]
+        else:
+            promise = addToStack((token, state))
+            out, state = await promise
+            
+        print(out.shape)
+
         for n in occurrence:
             out[n] -= (args.alpha_presence + occurrence[n] * args.alpha_frequency)
             
@@ -191,7 +255,7 @@ async def buildPrompt(conversation, model, pipeline):
     # add system prompt to cache
     cacheKey = hash(fullprompt)
     if cacheKey not in cachedStates.keys():
-        out, statea = model.forward(pipeline.encode(fullprompt)[-ctx_limit:], None)
+        out, statea = model.forward([pipeline.encode(fullprompt)[-ctx_limit:]], None)
         cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
     
     for m in conversation[1:-1]:
@@ -322,5 +386,6 @@ def cleanCachedStates():
                 break
             
 threading.Thread(target=cleanCachedStates).start()
+threading.Thread(target=runModel).start()
 
 web.run_app(app, port=9997)

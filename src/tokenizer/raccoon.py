@@ -167,7 +167,10 @@ class RaccTRIE_TOKENIZER():
         return tokens
 
     def decode(self, tokens):
-        return self.decodeBytes(tokens).decode('utf-8')
+        try:
+            return self.decodeBytes(tokens).decode('utf-8')
+        except:
+            return "<E>"
 
     def get_vocab_size(self):
         return self.vocab_size
