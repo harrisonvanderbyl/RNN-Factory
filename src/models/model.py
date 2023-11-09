@@ -9,6 +9,8 @@ import torch
 # torch._C._jit_set_profiling_mode(True)
 import torch.nn as nn
 
+from src.models.modules.Linear import InferenceLinear
+
 if importlib.util.find_spec('deepspeed'):
     import deepspeed
 
@@ -79,7 +81,8 @@ class Experimental(LightningModel):
         try:
             args.linear = args.linear
         except:
-            args.linear = nn.Linear
+            
+            args.linear = InferenceLinear
 
         try:
             self.batches = args.micro_bsz

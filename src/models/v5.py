@@ -31,8 +31,10 @@ class v5Block(nn.Module):
         x = self.ffn(self.ln2(x)) + x
         return x
 
+
 class RWKV_v5(Experimental):
     def __init__(self, args):
+        
         super().__init__(args, Block=v5Block)
 
         self = self.eval().requires_grad_(False).bfloat16().cpu()

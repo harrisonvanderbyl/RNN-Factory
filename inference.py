@@ -6,9 +6,7 @@ import numpy as np
 import types, time, gc
 import torch
 
-from src.samplers import sample_logits
 
-args = types.SimpleNamespace()
 
 ########################################################################################################
 # Step 1: set model & config (use v4 to run your trained-from-scratch models. v4 and v4neo are compatible)
@@ -18,15 +16,13 @@ args = types.SimpleNamespace()
 
 
 # MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/training/pipeline/models/5.pth'
-MODEL_NAME = '7B.pth'
-args.load_model = MODEL_NAME
 
+from src.samplers import sample_logits
 
-from src.models.modules.Linear import InferenceLinear, Quantized, Linear
-
-args.linear = InferenceLinear
 from src.models import RWKV_v4, RWKV_v5, Experimental
-args.load_model = MODEL_NAME
+args = types.SimpleNamespace()
+args.load_model = '7B.pth'
+
 model = RWKV_v5(args)
 
 from src.tokenizer import neox, world, racoon
