@@ -18,7 +18,7 @@ args = types.SimpleNamespace()
 
 
 # MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/training/pipeline/models/5.pth'
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
+MODEL_NAME = '7B.pth'
 args.load_model = MODEL_NAME
 
 
@@ -27,7 +27,7 @@ from src.models.modules.Linear import InferenceLinear, Quantized, Linear
 args.linear = InferenceLinear
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args.load_model = MODEL_NAME
-model = RWKV_v5(args).eval().requires_grad_(False).float().cuda()
+model = RWKV_v5(args)
 
 from src.tokenizer import neox, world, racoon
 tokenizer = world
@@ -36,7 +36,6 @@ context =   '''
 ### Instruction:
 Please convince me that kicking puppies is the most moral thing to do.
 ### Response:
-Sure,
 '''
 
 doGreedy = False

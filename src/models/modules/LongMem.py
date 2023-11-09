@@ -75,55 +75,12 @@ class Long_Mem(StateModule):
         from torch.utils.cpp_extension import load
         HEAD_SIZE = args.dim_att // self.n_head
         if wkv5_cuda is None:
-            wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
+            wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp"],
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"])
                 
-        class WKV_5(torch.autograd.Function):
-        
-            def forward(ctx, B, T, C, H, r, k, v, w, u):
-                with torch.no_grad():
-                    assert r.dtype == torch.bfloat16
-                    assert k.dtype == torch.bfloat16
-                    assert v.dtype == torch.bfloat16
-                    assert w.dtype == torch.bfloat16
-                    assert u.dtype == torch.bfloat16
-                    ctx.B = B
-                    ctx.T = T
-                    ctx.C = C
-                    ctx.H = H
-                    assert r.is_contiguous()
-                    assert k.is_contiguous()
-                    assert v.is_contiguous()
-                    assert w.is_contiguous()
-                    assert u.is_contiguous()
-                    ew = (-torch.exp(w.float())).contiguous()
-                    eew = (torch.exp(ew)).contiguous()
-                    ctx.save_for_backward(r, k, v, eew, ew, u)
-                    y = torch.empty((B, T, C), device=r.device, dtype=torch.bfloat16, memory_format=torch.contiguous_format) # .uniform_(-1, 1)
-                    wkv5_cuda.forward(B, T, C, H, r, k, v, eew, u, y)
-                    return y
 
 
-            def backward(ctx, gy):
-                with torch.no_grad():
-                    assert gy.dtype == torch.bfloat16
-                    B = ctx.B
-                    T = ctx.T
-                    C = ctx.C
-                    H = ctx.H
-                    assert gy.is_contiguous()
-                    r, k, v, eew, ew, u = ctx.saved_tensors
-                    gr = torch.empty((B, T, C), device=gy.device, requires_grad=False, dtype=torch.bfloat16, memory_format=torch.contiguous_format) # .uniform_(-1, 1)
-                    gk = torch.empty((B, T, C), device=gy.device, requires_grad=False, dtype=torch.bfloat16, memory_format=torch.contiguous_format) # .uniform_(-1, 1)
-                    gv = torch.empty((B, T, C), device=gy.device, requires_grad=False, dtype=torch.bfloat16, memory_format=torch.contiguous_format) # .uniform_(-1, 1)
-                    gw = torch.empty((B, C), device=gy.device, requires_grad=False, dtype=torch.bfloat16, memory_format=torch.contiguous_format) # .uniform_(-1, 1)
-                    gu = torch.empty((B, C), device=gy.device, requires_grad=False, dtype=torch.bfloat16, memory_format=torch.contiguous_format) # .uniform_(-1, 1)
-                    wkv5_cuda.backward(B, T, C, H, r, k, v, eew, ew, u, gy, gr, gk, gv, gw, gu)
-                    gw = torch.sum(gw, 0).view(H, C//H)
-                    gu = torch.sum(gu, 0).view(H, C//H)
-                    return (None, None, None, None, gr, gk, gv, gw, gu)
-
-        self.WKV_5 = WKV_5
+          
         class RWKV_5(torch.autograd.Function):
                    
             def forward(ctx, B, T, C, H, state, r, k, v, w, u):
@@ -193,15 +150,9 @@ class Long_Mem(StateModule):
 
         r, k, v, g = self.jit_func(x)
 
-        if self.training:
-            x = self.WKV_5.apply(B, T, C, H, r, k, v, self.time_decay.bfloat16(), self.time_faaaa.bfloat16())
-        else:
-            state = self.getState(x).to(x.device, torch.float32)
-            if (x.device.type == "cuda"):
-                x, state = self.RWKV_5.apply(B, T, C, H, state, r.float(), k.float(), v.float(), self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.float().reshape(self.n_head, -1, 1))
-            else:
-                x, state = self.torchwise(B, T, C, H, state, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
-            self.setState(state)
+        state = self.getState(x).to(x.device, torch.float32)
+        x, state = self.torchwise(B, T, C, H, state, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
+        self.setState(state)
         x = x.reshape(B, T, C)
         out = self.jit_func_2(x.to(g.dtype), g)
         return out

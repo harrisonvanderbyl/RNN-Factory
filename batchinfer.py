@@ -30,14 +30,6 @@ model = RWKV_v5(args)
 TEMPERATURE = 0.9
 top_p = 0.9
 
-model = model.eval()
-model = model.requires_grad_(False)
-# model = model.float()
-model = model.bfloat16()
-model = model.cpu()
-
-
-
 model.resetState()
 def init():
 
