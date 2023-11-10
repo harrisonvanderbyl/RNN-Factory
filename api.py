@@ -262,9 +262,9 @@ async def buildPrompt(conversation, model, pipeline):
     fullprompt = f"<|im_start|>{first_message['role']}\n{removeTokens(first_message['content']).strip()}<|im_end|>\n"
     # add system prompt to cache
     cacheKey = hash(fullprompt)
-    if cacheKey not in cachedStates.keys():
-        out, statea = model.forward([pipeline.encode(fullprompt)[-ctx_limit:]], None)
-        cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
+    # if cacheKey not in cachedStates.keys():
+    #     out, statea = model.forward([pipeline.encode(fullprompt)[-ctx_limit:]], None)
+    #     cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
     
     for m in conversation[1:-1]:
         if m['role'] == 'user':
@@ -317,8 +317,8 @@ async def handleRWKV(conversation, model, pipeline):
     
     print ("##################")
         
-    cacheKey = full_response.strip() + "<|im_end|>\n"
-    cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
+    # cacheKey = full_response.strip() + "<|im_end|>\n"
+    # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
     gc.collect()
         
 
