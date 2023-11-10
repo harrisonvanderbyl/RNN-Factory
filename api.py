@@ -167,7 +167,7 @@ async def evaluate(
     prompt,
     model,
     pipeline,
-    token_count=20,
+    token_count=1024,
     temperature=0.8,
     top_p=0.8,
     presencePenalty = 0.5,
