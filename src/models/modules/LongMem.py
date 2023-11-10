@@ -173,7 +173,6 @@ class Long_Mem(StateModule):
     
     def getState(self,state, x):
         if state is None:
-            print("NewState")
             return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size, device=x.device, dtype=torch.float32)
         
         return state

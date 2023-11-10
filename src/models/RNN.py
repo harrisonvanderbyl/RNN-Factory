@@ -64,12 +64,10 @@ class Model(nn.Module):
 
     def state_forward(self, *args, state=-1,flattenbatch=False, returnState=True, full_output=False, **kwargs):
         if state is None:
-            
             state={}
-        print(args)
+            
         logits, state = self._for(*args,state=state, **kwargs)
-        print("done model in")
-
+       
         if not full_output and not self.training :
             
             logits = logits[:,-1,:]

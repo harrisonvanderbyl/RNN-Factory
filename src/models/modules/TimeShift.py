@@ -18,7 +18,6 @@ class TimeShift(StateModule):
     
     def getState(self,state,x):
         if state is None:
-            print("Creating State")
             return torch.zeros(x.shape[0], self.shift, self.dims, device=x.device, dtype=x.dtype)
         return state
     

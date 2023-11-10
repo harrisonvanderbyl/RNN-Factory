@@ -105,9 +105,8 @@ def mergestates(states):
             for i, state in enumerate(states):
                 mystate[key][i] = state[key][0].to(mystate[key].device)
 
-    if len(states) < mystate[list(mystate.keys())[0]].shape[0]:
-        mystate = {key: mystate[key][:len(states)] for key in mystate.keys()}
     return mystate
+
 def splitstates(state):
     global mystate
     mystate = state
@@ -117,7 +116,7 @@ def splitstates(state):
 def runModel():
     while True:
         if len(thingsToDo) > 0:
-            print("Concurrent:", thingsToDo.__len__())
+            print("Concurrent:", thingsToDo.__len__(), flush=True, end='\r')
             thingsToDo2 = [thingsToDo.pop() for i in range(min(1024, len(thingsToDo)))]
             tokens = [[tok] for tok, state, do in thingsToDo2]
             
@@ -164,9 +163,9 @@ async def evaluate(
     prompt,
     model,
     pipeline,
-    token_count=1024,
-    temperature=1.4,
-    top_p=0.3,
+    token_count=20,
+    temperature=0.8,
+    top_p=0.8,
     presencePenalty = 0.5,
     countPenalty = 0.5,
     typicalSampling = True,
