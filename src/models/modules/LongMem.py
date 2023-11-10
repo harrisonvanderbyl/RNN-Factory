@@ -159,7 +159,7 @@ class Long_Mem(StateModule):
 
             if wkv5_cuda is None:
                 wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                        verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={H}"])
+                        verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={C//H}"])
            
             x, stateout = self.RWKV_5.apply(B, T, C, H, statein, r.float(), k.float(), v.float(), self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.float().reshape(self.n_head, -1, 1))
         else:
