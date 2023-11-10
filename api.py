@@ -99,7 +99,7 @@ def mergestates(states):
     global mystate
     if mystate is None or len(states) > mystate[list(mystate.keys())[0]].shape[0]:
         keys = states[0].keys()
-        mystate = {key: torch.cat([state[key] for state in states], dim=0) for key in keys}
+        mystate = {key: torch.cat([state[key].cuda() for state in states], dim=0) for key in keys}
     else:
         for key in states[0].keys():
             for i, state in enumerate(states):
