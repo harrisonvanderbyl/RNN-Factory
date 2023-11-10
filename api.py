@@ -105,6 +105,10 @@ def mergestates(states):
             for i, state in enumerate(states):
                 mystate[key][i] = state[key][0].to(mystate[key].device)
 
+    if len(states) < mystate[list(mystate.keys())[0]].shape[0]:
+        keys = states[0].keys()
+        mystate = {key: mystate[key][:len(states)] for key in keys}
+
     return mystate
 
 def splitstates(state):
