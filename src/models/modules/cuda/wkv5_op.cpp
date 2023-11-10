@@ -180,7 +180,6 @@ void forward_cpu(int64_t B, int64_t T, int64_t C, int64_t H, torch::Tensor &s, t
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("forward", &forward, "wkv5 forward");
-    m.def("forward_cpu", &forward_cpu, "CPU forward");
     m.def("backward", &backward, "wkv5 backward");
     m.def("forward_bf16", &forward_bf16, "rwkv5 forward_bf16");
     m.def("forward_fp16", &forward_fp16, "rwkv5 forward_fp16");
@@ -190,7 +189,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
 TORCH_LIBRARY(wkv5, m) {
     m.def("forward", forward);
-    m.def("forward_cpu", forward_cpu);
     m.def("backward", backward);
     m.def("forward_bf16", forward_bf16);
     m.def("forward_fp16", forward_fp16);
