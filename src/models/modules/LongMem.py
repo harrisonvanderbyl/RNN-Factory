@@ -75,11 +75,9 @@ class Long_Mem(StateModule):
         from torch.utils.cpp_extension import load
         HEAD_SIZE = args.dim_att // self.n_head
         if wkv5_cuda is None:
-            wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"])
+            wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
                 
-
-
           
         class RWKV_5(torch.autograd.Function):
                    
@@ -152,7 +150,13 @@ class Long_Mem(StateModule):
         r, k, v, g, state = self.jit_func(x,state)
 
         statein = self.getState(state.get(f"blocks.{self.layer_id}.att",None),x)
-        x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
+        
+        if (x.device.type == "cuda"):
+            x, stateout = self.RWKV_5.apply(B, T, C, H, statein, r.float(), k.float(), v.float(), self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.float().reshape(self.n_head, -1, 1))
+        else:
+            x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
+            
+        # x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
         state[f"blocks.{self.layer_id}.att"] = stateout
         x = x.reshape(B, T, C)
         out = self.jit_func_2(x.to(g.dtype), g)
@@ -161,7 +165,7 @@ class Long_Mem(StateModule):
     def getState(self,state, x):
         if state is None:
             print("NewState")
-            return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size)
+            return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size, device=x.device, dtype=torch.float32)
         
         return state
   

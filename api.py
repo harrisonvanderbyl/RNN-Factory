@@ -17,9 +17,9 @@ from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
-args.load_model = '/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
+args.load_model = '3B.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
 args.withPipeline = True
-model = RWKV_v5(args)
+model = RWKV_v5(args).cuda()
 models = [
     model,
 ]
@@ -98,13 +98,26 @@ def sample_logits(logits, temperature=1.0, top_p=0.85, top_k=0):
         return int(out)
     
 thingsToDo = []
+mystate = None
 
 def mergestates(states):
-    keys = states[0].keys()
-    return {key: torch.cat([state[key] for state in states], dim=0) for key in keys}
+    global mystate
+    if mystate is None or len(states) > mystate[list(mystate.keys())[0]].shape[0]:
+        keys = states[0].keys()
+        mystate = {key: torch.cat([state[key] for state in states], dim=0) for key in keys}
+    else:
+        for key in states[0].keys():
+            for i, state in enumerate(states):
+                mystate[key][i] = state[key][0]
 
+    if len(states) < mystate[list(mystate.keys())[0]].shape[0]:
+        mystate = {key: mystate[key][:len(states)] for key in mystate.keys()}
+    return mystate
 def splitstates(state):
-    return [{key: state[key][i:i+1] for key in state.keys()} for i in range(len(state[list(state.keys())[0]]))]
+    global mystate
+    mystate = state
+    keys = state.keys()
+    return [{key: state[key][i:i+1] for key in keys} for i in range(state[list(state.keys())[0]].shape[0])]
 
 def runModel():
     while True:
@@ -116,19 +129,15 @@ def runModel():
             
             state = mergestates([state for tok, state, do in thingsToDo2])
 
-            print("MergeShapes Done: ")
             out, state = model.forward(tokens, state)
 
-            print("ShapeOut: ",out.shape)
 
             states = splitstates(state)
 
-            print("SplitShapes Done: ")
-
             [do(out[i], states[i]) for i, ( tok, state, do) in enumerate(thingsToDo2)]
-            print("Done Concurrent")
+            
         else:
-            time.sleep(0.000001)
+            time.sleep(0.01)
 
 async def addToStack(inp):
     tok, state = inp
@@ -152,7 +161,7 @@ async def addToStack(inp):
     thingsToDo.append((tok,state,do))
 
     while not infrequest.done:
-        await asyncio.sleep(0.000001)
+        await asyncio.sleep(0.01)
 
     return infrequest.logits, infrequest.state
 
@@ -192,7 +201,6 @@ async def evaluate(
             promise = addToStack((token, state))
             out, state = await promise
             
-        print(out.shape)
 
         for n in occurrence:
             out[n] -= (args.alpha_presence + occurrence[n] * args.alpha_frequency)

@@ -26,7 +26,7 @@ class Feed_Forward(nn.Module):
     
     def forward(self, x, state):
         xx, stateout = self.time_shift(x,state.get(f"blocks.{self.layer_id}.ffn.time_shift",None)) # Mix x with the previous timestep to produce xk, xv, xr
-        state[f"blocks.{self.layer_id}.att.time_shift"] = stateout
+        state[f"blocks.{self.layer_id}.ffn.time_shift"] = stateout
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
         k = self.key(xk)

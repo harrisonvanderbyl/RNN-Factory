@@ -30,7 +30,7 @@ class v5Block(nn.Module):
         xo, state = self.att(self.ln1(x), state)
         x += xo
         xo, state = self.ffn(self.ln2(x),state)
-        x += x
+        x += xo
         return x, state
 
 
@@ -39,4 +39,4 @@ class RWKV_v5(Experimental):
         
         super().__init__(args, Block=v5Block)
 
-        self = self.eval().requires_grad_(False).bfloat16().cpu()
+        self = self.eval().requires_grad_(False).bfloat16()
