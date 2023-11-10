@@ -208,7 +208,7 @@ async def evaluate(
             token = sample_logits(out, temperature=args.temperature, top_p=args.top_p)
         
         if token in args.token_stop:
-            tmp = pipeline.decode(all_tokens[out_last:-1])
+            tmp = pipeline.decode(all_tokens[out_last:])
             yield tmp, state
             break
         all_tokens += [token]
