@@ -40,12 +40,7 @@ for model in models:
 import asyncio
 
 async def getModel():
-    while True:
-        for i in range(len(models)):
-            if not lockedModels[i]:
-                #lockedModels[i] = True
-                return models[i], pipelines[i], i
-        await asyncio.sleep(0.1)
+    return models[0], pipelines[0], 0
         
 def unlockModel(i):
     lockedModels[i] = False
@@ -123,8 +118,7 @@ def runModel():
     while True:
         if len(thingsToDo) > 0:
             print("Concurrent:", thingsToDo.__len__())
-            thingsToDo2 = thingsToDo.copy()
-            thingsToDo.clear()
+            thingsToDo2 = [thingsToDo.pop() for i in range(min(1024, len(thingsToDo)))]
             tokens = [[tok] for tok, state, do in thingsToDo2]
             
             state = mergestates([state for tok, state, do in thingsToDo2])
@@ -211,7 +205,7 @@ async def evaluate(
             token = sample_logits(out, temperature=args.temperature, top_p=args.top_p)
         
         if token in args.token_stop:
-            tmp = pipeline.decode(all_tokens[out_last:])
+            tmp = pipeline.decode(all_tokens[out_last:-1])
             yield tmp, state
             break
         all_tokens += [token]
@@ -342,6 +336,36 @@ async def buildOutputChunk(token):
     return "data: " + json.dumps(object) + "\n\n"
 
 
+async def proxy_embedding(request):
+
+    req_text = await request.text()
+    headers = dict(request.headers)
+
+    # get headings and then send the embeddings request to openai
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post('https://api.openai.com/v1/embeddings', headers=headers, data=req_text) as response:
+
+            headers = {k: v for k, v in response.headers.items()}
+            
+            full_response = ""
+            if isinstance(response, web.StreamResponse):
+                # Stream response back
+                response = web.StreamResponse(
+                    status=response.status,
+                    headers=headers,
+                )
+                response.content_length = response.content_length
+                
+                async for data in response.content.iter_any():
+                    full_response += data
+                    await response.write(data)
+
+            else:
+                full_response = await response.text()
+
+
+
 async def handle(request):
     model, pipeline, index = await getModel()
     try:
@@ -361,9 +385,7 @@ async def handle(request):
         async for token in handleRWKV(data['messages'], model, pipeline):
             await response.write((await buildOutputChunk(token)).encode())
             await asyncio.sleep(0.000001)
-            totalTokens += 1
-            
-        unlockModel(index)
+            totalTokens += 1   
 
         await response.write("data: [DONE]\n\n".encode())
             
@@ -375,12 +397,13 @@ async def handle(request):
         return response
     except OSError:
         print("## Client disconnected ##")
-        unlockModel(index)
+        
 
 app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
 app.add_routes([
     web.post('/v1/chat/completions', handle),
+    web.post('/v1/embeddings', proxy_embedding)
     # web.post('/v1/embeddings', proxy_embedding)
 ])
 
