@@ -77,13 +77,9 @@ class Long_Mem(StateModule):
         
           
         class RWKV_5(torch.autograd.Function):
-            global wkv5_cuda
-                   
+              
             def forward(ctx, B, T, C, H, state, r, k, v, w, u):
-                if wkv5_cuda is None:
-                    wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
-           
+                
                 with torch.no_grad():
                     assert HEAD_SIZE == C // H
                     ctx.B = B
@@ -159,6 +155,10 @@ class Long_Mem(StateModule):
         statein = self.getState(state.get(f"blocks.{self.layer_id}.att",None),x)
         
         if (x.device.type == "cuda"):
+            if wkv5_cuda is None:
+                wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
+                        verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={H}"])
+           
             x, stateout = self.RWKV_5.apply(B, T, C, H, statein, r.float(), k.float(), v.float(), self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.float().reshape(self.n_head, -1, 1))
         else:
             x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
