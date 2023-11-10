@@ -19,7 +19,7 @@ from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
 args.load_model = 'rwkv-3b-ai-town-v1.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
 args.withPipeline = True
-model = RWKV_v5(args).cpu()
+model = RWKV_v5(args).cuda()
 models = [
     model,
 ]
