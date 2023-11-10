@@ -6,7 +6,7 @@ from .StateModule import StateModule
 from .TimeShift import TimeShift
 
 from torch.nn import functional as F
-
+from torch.utils.cpp_extension import load
 # RWKV5 attention
 
 wkv5_cuda = None
@@ -72,16 +72,18 @@ class Long_Mem(StateModule):
 
         self.ln_x = nn.GroupNorm(self.n_head, args.dim_att)
 
-        from torch.utils.cpp_extension import load
+        
         HEAD_SIZE = args.dim_att // self.n_head
-        if wkv5_cuda is None:
-            wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
-                
+        
           
         class RWKV_5(torch.autograd.Function):
+            global wkv5_cuda
                    
             def forward(ctx, B, T, C, H, state, r, k, v, w, u):
+                if wkv5_cuda is None:
+                    wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={HEAD_SIZE}"])
+           
                 with torch.no_grad():
                     assert HEAD_SIZE == C // H
                     ctx.B = B
@@ -135,6 +137,11 @@ class Long_Mem(StateModule):
         return x
     
     def torchwise(self, B:int, T:int, C:int, H:int, s, r, k, v, w, u):
+        global wkv5_cuda
+        if wkv5_cuda is None:
+             wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/cpuonly.cpp"],
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"])
+                  
         rm = r.transpose(0,1).contiguous()
         km = k.transpose(0,1).contiguous()
         vm = v.transpose(0,1).contiguous()
