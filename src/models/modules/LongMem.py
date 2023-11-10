@@ -147,6 +147,7 @@ class Long_Mem(StateModule):
         return out.transpose(0,1).reshape(B, T, C), s
 
     def forward(self, x, state):
+        global wkv5_cuda
         B, T, C = x.size()
         H = self.n_head
 
@@ -155,6 +156,7 @@ class Long_Mem(StateModule):
         statein = self.getState(state.get(f"blocks.{self.layer_id}.att",None),x)
         
         if (x.device.type == "cuda"):
+
             if wkv5_cuda is None:
                 wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
                         verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={H}"])
