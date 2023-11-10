@@ -103,7 +103,7 @@ def mergestates(states):
     else:
         for key in states[0].keys():
             for i, state in enumerate(states):
-                mystate[key][i] = state[key][0]
+                mystate[key][i] = state[key][0].to(mystate[key].device)
 
     if len(states) < mystate[list(mystate.keys())[0]].shape[0]:
         mystate = {key: mystate[key][:len(states)] for key in mystate.keys()}
@@ -112,7 +112,7 @@ def splitstates(state):
     global mystate
     mystate = state
     keys = state.keys()
-    return [{key: state[key][i:i+1] for key in keys} for i in range(state[list(state.keys())[0]].shape[0])]
+    return [{key: state[key][i:i+1].cpu().clone() for key in keys} for i in range(state[list(state.keys())[0]].shape[0])]
 
 def runModel():
     while True:
