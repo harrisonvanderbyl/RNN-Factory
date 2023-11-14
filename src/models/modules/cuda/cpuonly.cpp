@@ -7,6 +7,7 @@ typedef float fp32;
 // simd
 #ifdef __AVX512F__  // This macro is defined if AVX-512 is supported
   #include <immintrin.h>
+  
   #define SIMD_WIDTH 16
   #define LOAD(x) _mm512_load_ps(x)
   #define STORE(x, y) _mm512_store_ps(x, y)

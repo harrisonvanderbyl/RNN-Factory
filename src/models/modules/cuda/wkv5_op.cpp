@@ -101,6 +101,7 @@ void forward_cpu(int64_t B, int64_t T, int64_t C, int64_t H, torch::Tensor &s, t
     auto uu = u.data_ptr<float>();
     auto ss = s.data_ptr<float>();
     auto out = y.data_ptr<float>();
+    
 
     // 1d tensor
     int64_t tsize = B*H*(C/H);

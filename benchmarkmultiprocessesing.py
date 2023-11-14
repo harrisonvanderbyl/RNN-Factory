@@ -10,8 +10,8 @@ from src.samplers import sample_logits
 args = types.SimpleNamespace()
 
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/3B.pth'
-MODEL_NAME = "/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth"
+MODEL_NAME = '/home/harrison/Documents/RNN-Factory/7B.pth'
+# MODEL_NAME = "/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth"
 args.load_model = MODEL_NAME
 args.micro_bsz = 5
 
@@ -34,11 +34,9 @@ model = model.eval()
 model = model.requires_grad_(False)
 # model = model.float()
 model = model.bfloat16()
-model = model.cuda()
+model = model.cpu()
 
 
-
-model.resetState()
 def init():
 
     
@@ -54,18 +52,18 @@ import gradio as gr
 
 
 def runmodel(tokens, streams):
-    model.resetState()
     
 
     toks = [tokeqs]*streams
-    logits = model.forward(toks)
+    logits, state = model.forward(toks, state=None)
     
     timee = time.clock_gettime(0)
     newtokens = [[]]*streams
-    for i in range(tokens):
+    import tqdm
+    for i in tqdm.tqdm(range(tokens)):
         toks = [torch.argmax(logits[j],dim=-1).item() for j in range(streams)]
         newtokens = [newtokens[j] + [toks[j]] for j in range(streams)]
-        logits = model.forward([[u] for u in toks])
+        logits, state = model.forward([[u] for u in toks], state=state)
         
     otime = time.clock_gettime(0)-timee
     # gc

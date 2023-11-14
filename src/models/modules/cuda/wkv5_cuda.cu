@@ -78,6 +78,7 @@ __global__ void kernel_forward_inference(const int B, const int T, const int C, 
     const int h = blockIdx.x % H;
     const int i = threadIdx.x;
     _w += h*_N_;
+    
     _u += h*_N_;
     _state += b * H * _N_*_N_ + h*_N_*_N_ + i*_N_; // wrong if B > 1 !!!
 
