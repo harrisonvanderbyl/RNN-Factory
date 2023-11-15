@@ -10,7 +10,7 @@ from src.samplers import sample_logits
 args = types.SimpleNamespace()
 
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/7B.pth'
+MODEL_NAME = "7B.pth"
 # MODEL_NAME = "/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth"
 args.load_model = MODEL_NAME
 args.micro_bsz = 5
@@ -34,7 +34,7 @@ model = model.eval()
 model = model.requires_grad_(False)
 # model = model.float()
 model = model.bfloat16()
-model = model.cpu()
+model = model.cuda()
 
 
 def init():
