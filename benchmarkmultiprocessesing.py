@@ -78,7 +78,7 @@ def runmodel(tokens, streams):
     return otime
 
 samples = 20
-increase = 8
+increase = 25
   
 from tqdm import tqdm
 stats = [
