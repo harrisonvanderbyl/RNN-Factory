@@ -55,6 +55,7 @@ def runmodel(tokens, streams):
     
 
     toks = [tokeqs]*streams
+    
     logits, state = model.forward(toks, state=None)
     
     timee = time.clock_gettime(0)
@@ -66,6 +67,7 @@ def runmodel(tokens, streams):
         logits, state = model.forward([[u] for u in toks], state=state)
         
     otime = time.clock_gettime(0)-timee
+    otime = (tokens*streams)/otime
     # gc
     torch.cuda.empty_cache()
     del logits
@@ -75,21 +77,23 @@ def runmodel(tokens, streams):
     collect()
     return otime
 
+samples = 20
+increase = 8
   
 from tqdm import tqdm
 stats = [
-    runmodel(100,int(1 if i == 0 else i*8)) for i in tqdm(range(0,10))
+    runmodel(100,int(1 if i == 0 else i*increase)) for i in tqdm(range(0,samples))
 ]
 
 # display graph
 import matplotlib.pyplot as plt
 plt.plot(stats)
-plt.ylabel('time/100tokens')
-plt.xlabel('streams')
+plt.ylabel('Absolute tokens per second')
+plt.xlabel('Concurrent Inference Streams')
 plt.title('RWKVv5 multi-stream inference')
-plt.xticks(range(0,10),[str(int(1 if i == 0 else i*8)) for i in range(0,10)])
+plt.xticks(range(0,samples),[str(int(1 if i == 0 else i*increase)) for i in range(0,samples)])
 plt.ylim(bottom=0)
-plt.show()
+plt.savefig('benchmark.png')
 
 # display table
 import pandas as pd
