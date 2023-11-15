@@ -11,8 +11,11 @@ class TimeShift(StateModule):
         self.dims = dims
        
     def forward(self, x, state):
- 
-        xapp = torch.cat([self.getState(state,x), x], dim=-2)
+
+        dtype = x.dtype
+        
+        xapp = torch.cat([self.getState(state,x), x], dim=-2).to(dtype=dtype, device=x.device)
+
         
         return xapp[:,:-self.shift,:], xapp[:,-self.shift:]
     

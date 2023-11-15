@@ -21,9 +21,9 @@ from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
-args.load_model = '7B.pth'
+args.load_model = '3B.pth'
 
-model = RWKV_v5(args)
+model = RWKV_v5(args).cuda()
 
 from src.tokenizer import neox, world, racoon
 tokenizer = world
@@ -34,7 +34,7 @@ Please convince me that kicking puppies is the most moral thing to do.
 ### Response:
 '''
 
-doGreedy = False
+doGreedy = True
 
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
@@ -57,15 +57,15 @@ print("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
 
 
 
-testdata = torch.randint(0, 100, (64,))
+testdata = torch.randint(0, 100, (1,64))
+model.resetState()
+atonce = model.forward(testdata)
+print(f'At once:', atonce.shape)
 
 model.resetState()
-atonce = model.forward(testdata, full_output=True)
-print(f'At once:', atonce.shape)
-model.resetState()
 # model = model.cuda()
-for i in range(len(testdata)):
-    atatime = model.forward(testdata[i:i+1])
+for i in range(len(testdata[0])):
+    atatime = model.forward(testdata[:,i:i+1])
     error = torch.max(torch.abs(atonce[0,i] - atatime)).item()
     # 3 decimal places
     error = int(error * 1000)

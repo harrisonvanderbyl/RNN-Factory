@@ -15,8 +15,7 @@ class Model(nn.Module):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._for = self.forward
-        withPipeline = self.withPipeline
-        self.forward = lambda args, state, **kwargs: self.state_forward(args,state=state,returnState=True,flattenbatch=False,**kwargs)
+        self.forward = lambda args, state=-1, **kwargs: self.state_forward(args,state=state,returnState=True,flattenbatch=False,**kwargs)
         
     def recursiveSetState(self, module, state=None, prefix='', state2=None, mix=0.0):
         if state is None:
@@ -65,6 +64,13 @@ class Model(nn.Module):
     def state_forward(self, *args, state=-1,flattenbatch=False, returnState=True, full_output=False, **kwargs):
         if state is None:
             state={}
+
+        if state == -1:
+            inplace = True
+            state = self.getState()
+
+        else:
+            inplace = False
             
         logits, state = self._for(*args,state=state, **kwargs)
        
@@ -72,6 +78,9 @@ class Model(nn.Module):
             
             logits = logits[:,-1,:]
             
+        if inplace:
+            self.setState(state)
+            return logits
         return logits, state
         
 

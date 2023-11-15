@@ -109,8 +109,9 @@ class Long_Mem(StateModule):
 
     def jit_func(self, x,state):
         B, T, C = x.size()
-
+        
         xx, stateout = self.time_shift(x,state.get(f"blocks.{self.layer_id}.att.time_shift",None)) # Mix x with the previous timestep to produce xk, xv, xr
+        
         state[f"blocks.{self.layer_id}.att.time_shift"] = stateout
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
