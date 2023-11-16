@@ -29,6 +29,10 @@ questions = [
                 message="How big do you want the model to be?",
                 choices=['7B', '3B', '1.5B'],
             ),
+            inquirer.List('type',
+                message="Which do you want to benchmark?",
+                choices=['Multiprocessing', 'State generation'],
+            ),
 ]
 
 answers = inquirer.prompt(questions)
@@ -87,10 +91,7 @@ def init():
     
     return model
 
-question = "What is the simplest yet deepest meaning of life?"
-
-
-tokeqs = tokenizer.encode("### Question\n"+question+"\n### Answer:\n")
+tokeqs = [1]
 
 
 import gradio as gr
@@ -99,17 +100,17 @@ import gradio as gr
 def runmodel(tokens, streams):
     
 
-    toks = [tokeqs]*streams
+    toks = [tokeqs]*streams if answers['type'] == 'Multiprocessing' else [tokeqs * streams]
     
     logits, state = model.forward(toks, state=None)
     
     timee = time.clock_gettime(0)
-    newtokens = [[]]*streams
+    newtokens = [[]]*streams if answers['type'] == 'Multiprocessing' else [[]]
     import tqdm
     for i in tqdm.tqdm(range(tokens)):
-        toks = [torch.argmax(logits[j],dim=-1).item() for j in range(streams)]
-        newtokens = [newtokens[j] + [toks[j]] for j in range(streams)]
-        logits, _ = model.forward([[u] for u in toks], state=state)
+        tokso = [torch.argmax(logits[j],dim=-1).item() for j in range(newtokens.__len__())]
+        newtokens = [newtokens[j] + [tokso[j]] for j in range(newtokens.__len__())]
+        logits, _ = model.forward(toks, state=state)
         
     otime = time.clock_gettime(0)-timee
     otime2 = (tokens*streams)/otime
@@ -140,25 +141,26 @@ import cpuinfo
 import matplotlib.pyplot as plt
 plt.plot([i[0] for i in stats])
 plt.ylabel('Absolute tokens per second')
-plt.xlabel("Concurrent streams/Simultaneous requests")
-plt.title(f'''RWKV V5 Multiprocessing\nDetails:{answers["size"]} ({answers["precision"]}) {device}\n Device: {
+plt.xlabel("Concurrent streams/Simultaneous requests" if answers['type'] == 'Multiprocessing' else "Token Processing")
+plt.title(f'''RWKV V5 {answers['type']} Benchmark\nDetails:{answers["size"]} ({answers["precision"]}) {device}\n Device: {
     torch.cuda.get_device_name(0) if device == "cuda" else cpuinfo.get_cpu_info()["brand_raw"]
 }''')
 plt.xticks(range(0,samples),[str(int(1 if i == 0 else i*increase)) for i in range(0,samples)])
 plt.ylim(bottom=0)
 # add subplot showing relative tokens per second
-plt.twinx()
-plt.plot([i[1] for i in stats], color='red')
-plt.ylabel('Client facing tokens per second')
-plt.ylim(bottom=0)
-plt.tight_layout()
+if answers['type'] == 'Multiprocessing':
+    plt.twinx()
+    plt.plot([i[1] for i in stats], color='red')
+    plt.ylabel('Client facing tokens per second')
+    plt.ylim(bottom=0)
+    plt.tight_layout()
 
 plt.savefig('benchmark.png')
 
 # display table
 import pandas as pd
 df = pd.DataFrame(stats,
-                  columns=['Absolute tokens per second', 'Client facing tokens per second'],
+                  columns=['Absolute tokens per second', 'Client facing tokens per second'] if answers['type'] == 'Multiprocessing' else ['Total Tokens Procesed per second', "States of this size processable per second"],
                   index=[int(1 if i == 0 else i*increase) for i in range(0,samples)]
 )
 print(df)
