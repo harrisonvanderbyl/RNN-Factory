@@ -143,7 +143,7 @@ class Experimental(LightningModel):
         try:
             args.dim_ffn
         except:
-            args.dim_ffn = 1 * args.n_embd
+            args.dim_ffn = int(3.5 * args.n_embd)
 
         self.args = args
 
