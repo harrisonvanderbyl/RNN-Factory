@@ -70,7 +70,7 @@ __global__ void kernel_forward(const int B, const int T, const int C, const int 
 
 
 template <typename F>
-__global__ void kernel_forward_inference(const int B, const int T, const int C, const int H, float *__restrict__ _state,
+__global__ void kernel_forward_inference(const int B, const int T, const int C, const int H, F *__restrict__ _state,
                                const F *__restrict__ const _r, const F *__restrict__ const _k, const F *__restrict__ const _v, const float *__restrict__ _w, const F *__restrict__ _u,
                                F *__restrict__ const _y)
 {
@@ -87,7 +87,7 @@ __global__ void kernel_forward_inference(const int B, const int T, const int C, 
     float state[_N_];
     #pragma unroll
     for (int j = 0; j < _N_; j++)
-        state[j] = _state[j];
+        state[j] = float(_state[j]);
     
     __syncthreads();
     u[i] = float(_u[i]);
@@ -133,7 +133,7 @@ __global__ void kernel_forward_inference(const int B, const int T, const int C, 
     }
     #pragma unroll
     for (int j = 0; j < _N_; j++)
-        _state[j] = state[j];
+        _state[j] = F(state[j]);
 }
 
 template <typename DTYPE>
@@ -181,12 +181,12 @@ void cudac_mm8_one(unsigned long long N, unsigned long long M,
         N, M, x, w, w_stride, y, r, o, offset, tokenlength);
 }
 
-void cuda_forward_bf16(int B, int T, int C, int H, float *state, bf16 *r, bf16 *k, bf16 *v, float *w, bf16 *u, bf16 *y)
+void cuda_forward_bf16(int B, int T, int C, int H, bf16 *state, bf16 *r, bf16 *k, bf16 *v, float *w, bf16 *u, bf16 *y)
 {
     assert(H*_N_ == C);
     kernel_forward_inference<<<dim3(B * H), dim3(_N_)>>>(B, T, C, H, state, r, k, v, w, u, y);
 }
-void cuda_forward_fp16(int B, int T, int C, int H, float *state, fp16 *r, fp16 *k, fp16 *v, float *w, fp16 *u, fp16 *y)
+void cuda_forward_fp16(int B, int T, int C, int H, fp16 *state, fp16 *r, fp16 *k, fp16 *v, float *w, fp16 *u, fp16 *y)
 {
     assert(H*_N_ == C);
     kernel_forward_inference<<<dim3(B * H), dim3(_N_)>>>(B, T, C, H, state, r, k, v, w, u, y);

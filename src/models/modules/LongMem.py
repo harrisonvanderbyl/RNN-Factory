@@ -86,7 +86,6 @@ class Long_Mem(StateModule):
                     ctx.T = T
                     ctx.C = C
                     ctx.H = H
-                    assert state.dtype == torch.float32
                     assert w.dtype == torch.float32
                     assert r.is_contiguous()
                     assert k.is_contiguous()
@@ -169,7 +168,7 @@ class Long_Mem(StateModule):
                             verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-O3", f"-D_N_={C//H}"])
             x, stateout = self.RWKV_5.apply(B, T, C, H, statein, r, k, v, self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.reshape(self.n_head, -1, 1))
         else:
-            x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
+            x, stateout = self.torchwise(B, T, C, H, statein.float(), r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
             
         # x, stateout = self.torchwise(B, T, C, H, statein, r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
         state[f"blocks.{self.layer_id}.att"] = stateout
@@ -179,7 +178,7 @@ class Long_Mem(StateModule):
     
     def getState(self,state, x):
         if state is None:
-            return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size, device=x.device, dtype=torch.float32)
+            return torch.zeros(x.shape[0], self.n_head, self.head_size, self.head_size, device=x.device, dtype=x.dtype)
         
         return state
   
