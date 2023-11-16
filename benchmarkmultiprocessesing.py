@@ -112,7 +112,7 @@ def runmodel(tokens, streams):
         logits, _ = model.forward([[u] for u in toks], state=state)
         
     otime = time.clock_gettime(0)-timee
-    otime = (tokens*streams)/otime
+    otime2 = (tokens*streams)/otime
     tps = tokens/otime
     # gc
     torch.cuda.empty_cache()
@@ -121,32 +121,49 @@ def runmodel(tokens, streams):
     del newtokens
     from gc import collect
     collect()
-    return otime, tps
+    return otime2, tps
 
-samples = 10
+samples = 11
 increase = 64
+granularity = 100
   
 from tqdm import tqdm
 stats = [
-    runmodel(100,int(1 if i == 0 else i*increase)) for i in tqdm(range(0,samples))
+    runmodel(granularity,int(1 if i == 0 else i*increase)) for i in tqdm(range(0,samples))
 ]
 
-fullTokens = sum([i[0] for i in stats])
-perStreamTokens = fullTokens/len(stats)
+# fullTokens = sum([i[0] for i in stats])
+# perStreamTokens = fullTokens/len(stats)
 
 # display graph
+import cpuinfo
 import matplotlib.pyplot as plt
-plt.plot(stats)
+plt.plot([i[0] for i in stats])
 plt.ylabel('Absolute tokens per second')
-plt.xlabel('Concurrent Inference Streams')
-plt.title('RWKVv5 multi-stream inference')
+plt.xlabel("Concurrent streams/Simultaneous requests")
+plt.title(f'''RWKV V5 Multiprocessing\nDetails:{answers["size"]} ({answers["precision"]}) {device}\n Device: {
+    torch.cuda.get_device_name(0) if device == "cuda" else cpuinfo.get_cpu_info()["brand_raw"]
+}''')
 plt.xticks(range(0,samples),[str(int(1 if i == 0 else i*increase)) for i in range(0,samples)])
 plt.ylim(bottom=0)
+# add subplot showing relative tokens per second
+plt.twinx()
+plt.plot([i[1] for i in stats], color='red')
+plt.ylabel('Client facing tokens per second')
+plt.ylim(bottom=0)
+plt.tight_layout()
+
 plt.savefig('benchmark.png')
 
 # display table
 import pandas as pd
-df = pd.DataFrame(stats)
+df = pd.DataFrame(stats,
+                  columns=['Absolute tokens per second', 'Client facing tokens per second'],
+                  index=[int(1 if i == 0 else i*increase) for i in range(0,samples)]
+)
 print(df)
 df.to_csv('benchmark.csv')
+
+# upload to wandb
+
 
