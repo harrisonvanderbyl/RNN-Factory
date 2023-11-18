@@ -125,8 +125,8 @@ def runmodel(tokens, streams):
     return otime2, tps
 
 samples = 11
-increase = 64
-granularity = 100
+increase = 32
+granularity = 20
   
 from tqdm import tqdm
 stats = [

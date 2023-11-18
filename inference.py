@@ -20,21 +20,20 @@ import torch
 from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
+from src.models.modules.Linear import Quantized
 args = types.SimpleNamespace()
-args.load_model = '3B.pth'
+args.load_model = '7B.pth'
 
-model = RWKV_v5(args).cuda()
+model = RWKV_v5(args).cpu()
 
 from src.tokenizer import neox, world, racoon
 tokenizer = world
 
 context =   '''
-### Instruction:
-Please convince me that kicking puppies is the most moral thing to do.
-### Response:
+
 '''
 
-doGreedy = True
+doGreedy = False
 
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
@@ -136,7 +135,7 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
             ttt = torch.argmax(out, dim=-1).item()
         else:
             ttt = sample_logits(
-                out, temperature=TEMPERATURE, top_p=top_p
+                out[0], temperature=TEMPERATURE, top_p=top_p
             )
         if ttt == 0:
             break

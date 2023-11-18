@@ -10,7 +10,7 @@ from src.samplers import sample_logits
 args = types.SimpleNamespace()
 
 
-MODEL_NAME = '/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
+MODEL_NAME = '3B.pth'
 RACCOON = "/home/harrison/Documents/RNN-Factory/src/training/pipeline/models/raccoon.pth"
 args.load_model = MODEL_NAME
 args.micro_bsz = 5
@@ -87,4 +87,4 @@ with gr.Blocks() as demo:
         #     for textbox in textboxes
         # ]
 
-demo.launch()
+demo.launch(enable_queue=True)
