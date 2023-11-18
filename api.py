@@ -17,9 +17,9 @@ from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
-args.load_model = 'rwkv-3b-ai-town-v1.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
+args.load_model = '3B.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
 args.withPipeline = True
-model = RWKV_v5(args).cuda()
+model = RWKV_v5(args).cpu()
 models = [
     model,
 ]
@@ -99,7 +99,7 @@ def mergestates(states):
     global mystate
     if mystate is None or len(states) > mystate[list(mystate.keys())[0]].shape[0]:
         keys = states[0].keys()
-        mystate = {key: torch.cat([state[key].cuda() for state in states], dim=0) for key in keys}
+        mystate = {key: torch.cat([state[key].to(model.device) for state in states], dim=0) for key in keys}
     else:
         for key in states[0].keys():
             for i, state in enumerate(states):
@@ -255,42 +255,26 @@ def removeTokens(text):
 cachedStates = {}
 
 async def buildPrompt(conversation, model, pipeline):
-    first_message = conversation[0]
-    fullprompt = f"<|im_start|>{first_message['role']}\n{removeTokens(first_message['content']).strip()}<|im_end|>\n"
+    first_message = conversation
+    fullprompt = removeTokens(first_message).strip()
     # add system prompt to cache
     cacheKey = hash(fullprompt)
     # if cacheKey not in cachedStates.keys():
     #     out, statea = model.forward([pipeline.encode(fullprompt)[-ctx_limit:]], None)
     #     cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
     
-    for m in conversation[1:-1]:
-        if m['role'] == 'user':
-            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'assistant':
-            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'system':
-            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+    # for m in conversation[1:-1]:
+    #     if m['role'] == 'user':
+    #         fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+    #     elif m['role'] == 'assistant':
+    #         fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+    #     elif m['role'] == 'system':
+    #         fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
             
     # hash current prompt to check for cached state
     state = None
-    cacheKey = hash(fullprompt)
-    if cacheKey in cachedStates.keys():
-        state, expiration = cachedStates[cacheKey]
-        prompt = ""
-        # reset expiration
-        cachedStates[cacheKey] = (state, time.time() + 60) # 1 minute
-        state = copy.deepcopy(state)
-        print("## Using Cached State ##")
-    else:
-        prompt = fullprompt
     
-    # trim message
-    last_message = conversation[-1]
-            
-    prompt += f"<|im_start|>{last_message['role']}\n" + removeTokens(last_message['content']).strip() + "<|im_end|>\n<|im_start|>assistant\n"
-    fullprompt += f"<|im_start|>{last_message['role']}\n" + removeTokens(last_message['content']).strip() + "<|im_end|>\n<|im_start|>assistant\n"
-    
-    return prompt, state, fullprompt
+    return fullprompt, state, fullprompt
     
 
 async def handleRWKV(conversation, model, pipeline):
@@ -379,13 +363,16 @@ async def handle(request):
         )
         await response.prepare(request)
         # get the request data (json)
-        data = await request.json()    
+        sms = await request.text()
+
+       
+        data = sms  
         
         startTime = time.time()
         totalTokens = 0
         
         # run handleRwkv generator and output the result
-        async for token in handleRWKV(data['messages'], model, pipeline):
+        async for token in handleRWKV(data, model, pipeline):
             await response.write((await buildOutputChunk(token)).encode())
             await asyncio.sleep(0.000001)
             totalTokens += 1   
