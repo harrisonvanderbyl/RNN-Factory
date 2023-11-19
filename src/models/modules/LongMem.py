@@ -134,6 +134,7 @@ class Long_Mem(StateModule):
     
     def torchwise(self, B:int, T:int, C:int, H:int, s, r, k, v, w, u):
         global wkv5_cuda
+        
         if wkv5_cuda is None:
              wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/cpuonly.cpp"],
                             verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"])

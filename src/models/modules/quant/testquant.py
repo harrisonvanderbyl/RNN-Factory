@@ -42,5 +42,5 @@ class InferenceLinear(torch.nn.Module):
 
 quant = InferenceLinear()
 
-x = torch.randn(8,8,4096)
+x = torch.randn(1,1,4096)
 quant(x)
