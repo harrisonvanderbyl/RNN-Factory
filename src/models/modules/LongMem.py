@@ -135,15 +135,13 @@ class Long_Mem(StateModule):
     def torchwise(self, B:int, T:int, C:int, H:int, s, r, k, v, w, u):
         global wkv5_cuda
         
-        if wkv5_cuda is None:
-             wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/cpuonly.cpp"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"])
+             
                   
         rm = r.transpose(0,1).contiguous()
         km = k.transpose(0,1).contiguous()
         vm = v.transpose(0,1).contiguous()
         out = torch.zeros(T,B, H, C//H).cpu()
-        wkv5_cuda.forward_cpu(B,T,C,H, s, rm, km, vm, w, u, out)
+        torch.ops.wkv5.forward_cpu(B,T,C,H, s, rm, km, vm, w, u, out)
                     
         return out.transpose(0,1).reshape(B, T, C), s
 

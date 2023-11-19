@@ -41,19 +41,21 @@ void matmul_avx512_optimized(const torch::Tensor &At, const torch::Tensor &Art, 
     auto B = Bt.data_ptr<float>();
     auto C = Ct.data_ptr<float>();
 
-    const long inblocksize = 64;
+    const long inblocksize = 128;
+    const long horizontal_block_size = 16;
 
     // Parallel computation
-    #pragma omp parallel for collapse(2) shared(A, Ar, Ao, B, C)
+    #pragma omp parallel for collapse(3) shared(A, Ar, Ao, B, C)
     for (long i = 0; i < OUT; i += 1) {
         for (long kk = 0; kk < IN; kk += inblocksize){
+            for (long bbb = 0; bbb < BB; bbb += horizontal_block_size){
             long io = i << 4;
             __m512 Ario = load_aligned(&Ar[io]);
             __m512 Aoio = load_aligned(&Ao[io]);
             for (long k = kk; k < kk + inblocksize; k += 16) {
                 __m512 aa = convert_uint8_to_ps(&A[i * IN + k]);
                 for (long j = 0; j < T; j += 1) {
-                    for (long bb = 0; bb < BB; bb += 1) {
+                    for (long bb = bbb; bb < std::min(bbb+horizontal_block_size,BB); bb += 1) {
                         
                         __m512 a = _mm512_fmadd_ps(Ario, aa, Aoio);
                             
@@ -65,6 +67,7 @@ void matmul_avx512_optimized(const torch::Tensor &At, const torch::Tensor &Art, 
                         C[bb * T * OUT + j * OUT + i] += c[0] + c[1] + c[2] + c[3] + c[4] + c[5] + c[6] + c[7] + c[8] + c[9] + c[10] + c[11] + c[12] + c[13] + c[14] + c[15];
                     }
                 }
+            }
             }
         }
     }

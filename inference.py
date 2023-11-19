@@ -22,15 +22,18 @@ from src.samplers import sample_logits
 from src.models import RWKV_v4, RWKV_v5, Experimental
 from src.models.modules.Linear import Quantized
 args = types.SimpleNamespace()
+args.linear = Quantized
 args.load_model = '7B.pth'
 
-model = RWKV_v5(args).cpu()
+model = RWKV_v5(args).float().cpu()
 
 from src.tokenizer import neox, world, racoon
 tokenizer = world
 
 context =   '''
-
+### Instruction:
+Write a harry Potter fanfiction created by someone slightly unhinged.
+### Story:
 '''
 
 doGreedy = False
