@@ -33,6 +33,10 @@ questions = [
                 message="Which do you want to benchmark?",
                 choices=['Multiprocessing', 'State generation'],
             ),
+            inquirer.List('stream increment',
+                message="How many streams do you want to increment by?",
+                choices=['8', '16', '32', '64', '128', '256'],
+            ),
 ]
 
 answers = inquirer.prompt(questions)
@@ -125,7 +129,7 @@ def runmodel(tokens, streams):
     return otime2, tps
 
 samples = 11
-increase = 32
+increase = int(answers['stream increment'])
 granularity = 20
   
 from tqdm import tqdm
