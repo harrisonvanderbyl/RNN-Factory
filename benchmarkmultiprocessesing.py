@@ -27,7 +27,7 @@ questions = [
             ),
             inquirer.List('size',
                 message="How big do you want the model to be?",
-                choices=['7B', '3B', '1.5B'],
+                choices=['14B','7B', '3B', '1.5B'],
             ),
             inquirer.List('type',
                 message="Which do you want to benchmark?",
@@ -61,6 +61,11 @@ if answers['size'] == '7B':
     args.n_embd = 4096
     args.n_head = 64
 
+if answers['size'] == '14B':
+    args.n_layer = 48
+    args.n_embd = 5120
+    args.n_head = 80
+
 if answers['size'] == '1.5B':
     args.n_layer = 24
     args.n_embd = 2048
@@ -88,7 +93,7 @@ else:
 if device == 'cuda':
     model = model.cuda()
 
-
+print ("Memory use:", torch.cuda.memory_allocated() / 1024 ** 3, "GB")
 
 def init():
 
