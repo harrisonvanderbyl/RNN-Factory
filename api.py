@@ -1,5 +1,6 @@
 import copy
 import os, gc, torch
+import random
 import time
 import types
 #from huggingface_hub import hf_hub_download
@@ -17,7 +18,7 @@ from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
-args.load_model = 'rwkv-3b-ai-town-v1.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
+args.load_model = '3B.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
 args.withPipeline = True
 model = RWKV_v5(args).cuda()
 models = [
@@ -255,41 +256,27 @@ def removeTokens(text):
 cachedStates = {}
 
 async def buildPrompt(conversation, model, pipeline):
-    first_message = conversation[0]
-    fullprompt = f"<|im_start|>{first_message['role']}\n{removeTokens(first_message['content']).strip()}<|im_end|>\n"
-    # add system prompt to cache
-    cacheKey = hash(fullprompt)
+    
+    fullprompt = ""
     # if cacheKey not in cachedStates.keys():
     #     out, statea = model.forward([pipeline.encode(fullprompt)[-ctx_limit:]], None)
     #     cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
     
-    for m in conversation[1:-1]:
+    for m in conversation:
+        print("Role:",m['role'])
         if m['role'] == 'user':
-            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            fullprompt += "### Input:\n" + removeTokens(m['content']).strip() + "\n"
         elif m['role'] == 'assistant':
-            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            fullprompt += "### Response:\n" + removeTokens(m['content']).strip() + "\n"
         elif m['role'] == 'system':
-            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            fullprompt += "### Instruction:\n" + removeTokens(m['content']).strip() + "\n"
             
     # hash current prompt to check for cached state
-    state = None
-    cacheKey = hash(fullprompt)
-    if cacheKey in cachedStates.keys():
-        state, expiration = cachedStates[cacheKey]
-        prompt = ""
-        # reset expiration
-        cachedStates[cacheKey] = (state, time.time() + 60) # 1 minute
-        state = copy.deepcopy(state)
-        print("## Using Cached State ##")
-    else:
-        prompt = fullprompt
     
     # trim message
-    last_message = conversation[-1]
+    state = None
             
-    prompt += f"<|im_start|>{last_message['role']}\n" + removeTokens(last_message['content']).strip() + "<|im_end|>\n<|im_start|>assistant\n"
-    fullprompt += f"<|im_start|>{last_message['role']}\n" + removeTokens(last_message['content']).strip() + "<|im_end|>\n<|im_start|>assistant\n"
-    
+    prompt = fullprompt +"### Response:\n"
     return prompt, state, fullprompt
     
 
@@ -339,35 +326,6 @@ async def buildOutputChunk(token):
     return "data: " + json.dumps(object) + "\n\n"
 
 
-async def proxy_embedding(request):
-
-    req_text = await request.text()
-    headers = dict(request.headers)
-
-    # get headings and then send the embeddings request to openai
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post('https://api.openai.com/v1/embeddings', headers=headers, data=req_text) as response:
-
-            headers = {k: v for k, v in response.headers.items()}
-            
-            full_response = ""
-            if isinstance(response, web.StreamResponse):
-                # Stream response back
-                response = web.StreamResponse(
-                    status=response.status,
-                    headers=headers,
-                )
-                response.content_length = response.content_length
-                
-                async for data in response.content.iter_any():
-                    full_response += data
-                    await response.write(data)
-
-            else:
-                full_response = await response.text()
-
-
 
 async def handle(request):
     model, pipeline, index = await getModel()
@@ -406,20 +364,37 @@ app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
 app.add_routes([
     web.post('/v1/chat/completions', handle),
-    web.post('/v1/embeddings', proxy_embedding)
+    # web.post('/v1/embeddings', proxy_embedding)
     # web.post('/v1/embeddings', proxy_embedding)
 ])
 
-def cleanCachedStates():
-    while True:
-        time.sleep(15) # every minute
-        for k in cachedStates.keys():
-            if cachedStates[k][1] < time.time():
-                del cachedStates[k]
-                print("## Cleared A Cached State ##")
-                break
+  
+import requests as axios 
+
+
+ClusterRouterServers = ["http://localhost:3000"]
+modelName = "RWKV_32_2560_32_17_QUInt8-pc-norr-ext.onnx"
+modelPath = "./conversion/" + modelName
+PORT = 6474
+doSeq = False
+authentication = "testpassword"
+currentUrl = "http://localhost"
+# random id generator
+rand = random.Random()
+# ID = "RWKV-" + str(rand.randint(0, 1000000000))
+ID = "RWKV-test1"
+
+response = axios.post(ClusterRouterServers[0] + "/register", json={
+    "ID": ID + "-batch",
+    "models": [modelName],
+    "capacity": 1,
+    "type": "FAST",
+    "authentication": authentication,
+    "port": PORT,
+    "url": currentUrl,
+    "endpoint": "/v1/chat/completions",
+    })
             
-threading.Thread(target=cleanCachedStates).start()
 threading.Thread(target=runModel).start()
 
-web.run_app(app, port=9997)
+web.run_app(app, port=PORT)
