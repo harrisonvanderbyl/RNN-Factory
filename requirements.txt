@@ -6,3 +6,5 @@ transformers
 inquirer 
 ninja
 pynvml
+rwkv
+aiohttp
