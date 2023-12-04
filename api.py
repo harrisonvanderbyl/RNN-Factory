@@ -44,7 +44,7 @@ if args.load_model not in ["1B5", "7B", "3B"]:
 # if not exists, download from huggingface
 if not os.path.exists(args.load_model+".pth"):
     # if specific url is passed in
-    if len(sys.argv) >= 3:
+    if len(sys.argv) > 3:
         url = sys.argv[3]
     else:
         defaults = {

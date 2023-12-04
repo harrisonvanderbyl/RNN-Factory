@@ -5,3 +5,4 @@ gradio
 transformers 
 inquirer 
 ninja
+pynvml
