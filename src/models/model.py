@@ -106,7 +106,7 @@ class Experimental(LightningModel):
             modelpath = None
         
         if modelpath:
-            file = torch.load(modelpath, map_location="cpu")
+            file = torch.load(modelpath)#, map_location="cpu")
             keys = list(file.keys())
             print("keys", keys)
             # remove _orig_mod from keys for compatibility with torch.compile

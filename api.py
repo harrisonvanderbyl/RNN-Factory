@@ -18,7 +18,47 @@ from src.samplers import sample_logits
 
 from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
-args.load_model = '3B.pth'#'/home/harrison/Documents/RNN-Factory/src/rwkv-raccoon-1b5.pth'
+
+# get model file from command line
+import sys
+
+if len(sys.argv) < 1:
+    print("Please specify model name")
+    print("Pass in optional argument for specific model url")
+    print("Example: python3 ./api.py 1B5")
+    print("Example: python3 ./api.py 1B5 https://huggingface.co/BlinkDL/rwkv-5-world/resolve/main/RWKV-5-World-1B5-v2-20231025-ctx4096.pth")
+    exit()
+
+print(sys.argv)
+
+args.load_model = sys.argv[1] # python3 ./api.py ./model.pth
+
+# if loadmodel not in 1B5, 7B, 3B throw error
+if args.load_model not in ["1B5", "7B", "3B"]:
+    print("Invalid model name, options are 1B5, 7B, 3B")
+    print("Pass in optional argument for specific model url")
+    exit()
+
+# if not exists, download from huggingface
+if not os.path.exists(args.load_model+".pth"):
+    # if specific url is passed in
+    if len(sys.argv) >= 2:
+        url = sys.argv[2]
+    else:
+        defaults = {
+            "1B5": "https://huggingface.co/BlinkDL/rwkv-5-world/resolve/main/RWKV-5-World-1B5-v2-20231025-ctx4096.pth",
+            "7B": "https://huggingface.co/BlinkDL/temp/resolve/main/RWKV-5-World-7B-v2-OnlyForTest_60%25_trained-20231124-ctx4096.pth",
+            "3B": "https://huggingface.co/BlinkDL/rwkv-5-world/resolve/main/RWKV-5-World-3B-v2-20231113-ctx4096.pth"
+        }
+        
+        # download and rename
+        url = defaults[args.load_model]
+    print("Downloading model from", url)
+    os.system("wget " + url + " -O " + args.load_model + ".pth")
+    print("Downloaded model to", args.load_model)
+    
+args.load_model = args.load_model + ".pth"
+
 args.withPipeline = True
 model = RWKV_v5(args).cuda()
 models = [
@@ -304,6 +344,30 @@ async def handleRWKV(conversation, model, pipeline):
     # cacheKey = full_response.strip() + "<|im_end|>\n"
     # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
     gc.collect()
+    
+async def handleRWKVDirect(prompt, model, pipeline):
+    typicalSampling = True
+    
+    statee = None
+    
+    response = ""
+    async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
+        
+        response += token
+        yield token
+        await asyncio.sleep(0.000001)
+
+    
+    print ("## Prompt ##")
+    print (prompt)
+    print ("## Response ##")
+    print (response)
+    
+    print ("##################")
+        
+    # cacheKey = full_response.strip() + "<|im_end|>\n"
+    # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
+    gc.collect()
         
 
 from aiohttp import web
@@ -358,42 +422,90 @@ async def handle(request):
         return response
     except OSError:
         print("## Client disconnected ##")
+
+
+async def handleCompletion(request):
+    model, pipeline, index = await getModel()
+    try:
+        response = web.StreamResponse(
+            status=200,
+            reason='OK',
+            headers={'Content-Type': 'text/plain'},
+        )
+        await response.prepare(request)
+        # get the request data (json)
+        data = await request.json()    
         
+        startTime = time.time()
+        totalTokens = 0
+        
+        # run handleRwkv generator and output the result
+        async for token in handleRWKV(data['prompt'], model, pipeline):
+            await response.write((await buildOutputChunk(token)).encode())
+            await asyncio.sleep(0.000001)
+            totalTokens += 1   
+
+        await response.write("data: [DONE]\n\n".encode())
+            
+        print(f"## Time taken: {time.time() - startTime} ##")
+        print(f"## Tokens generated: {totalTokens} ##")
+        print(f"## Tokens per second: {totalTokens / (time.time() - startTime)} ##")
+        
+        await response.write_eof()
+        return response
+    except OSError:
+        print("## Client disconnected ##")
+               
+def getModelM(request):
+    #  id: model,
+    #       object: "model",
+    #       created: 1686935002,
+    #       owned_by: "recursal.ai"
+    return web.json_response({
+        "data": [
+            {
+                "id": args.load_model.split(".")[0],
+                "object": "model",
+                "created": 1686935002,
+                "owned_by": "recursal.ai"
+            }
+        ]
+    })
 
 app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
 app.add_routes([
     web.post('/v1/chat/completions', handle),
-    # web.post('/v1/embeddings', proxy_embedding)
-    # web.post('/v1/embeddings', proxy_embedding)
+    web.post('/v1/completions', handleCompletion),
+    web.get('/v1/models', getModelM),
 ])
 
   
 import requests as axios 
 
 
-ClusterRouterServers = ["http://localhost:3000"]
-modelName = "RWKV_32_2560_32_17_QUInt8-pc-norr-ext.onnx"
-modelPath = "./conversion/" + modelName
+# ClusterRouterServers = ["http://localhost:3000"]
+# modelName = "RWKV_32_2560_32_17_QUInt8-pc-norr-ext.onnx"
+# modelPath = "./conversion/" + modelName
 PORT = 6474
-doSeq = False
-authentication = "testpassword"
-currentUrl = "http://localhost"
-# random id generator
-rand = random.Random()
-# ID = "RWKV-" + str(rand.randint(0, 1000000000))
-ID = "RWKV-test1"
+# doSeq = False
+# authentication = "testpassword"
+# currentUrl = "http://localhost"
+# # random id generator
+# rand = random.Random()
+# # ID = "RWKV-" + str(rand.randint(0, 1000000000))
+# ID = "RWKV-test1"
 
-response = axios.post(ClusterRouterServers[0] + "/register", json={
-    "ID": ID + "-batch",
-    "models": [modelName],
-    "capacity": 1,
-    "type": "FAST",
-    "authentication": authentication,
-    "port": PORT,
-    "url": currentUrl,
-    "endpoint": "/v1/chat/completions",
-    })
+# response = axios.post(ClusterRouterServers[0] + "/register", json={
+#     "ID": ID + "-batch",
+#     "models": [modelName],
+#     "capacity": 1,
+#     "type": "FAST",
+#     "authentication": authentication,
+#     "port": PORT,
+#     "url": currentUrl,
+#     "endpoint": "/v1/chat/completions",
+#     })
             
 threading.Thread(target=runModel).start()
 
