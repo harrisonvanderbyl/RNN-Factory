@@ -23,15 +23,17 @@ args = types.SimpleNamespace()
 import sys
 
 if len(sys.argv) < 1:
+    print("Please specify port")
     print("Please specify model name")
     print("Pass in optional argument for specific model url")
-    print("Example: python3 ./api.py 1B5")
-    print("Example: python3 ./api.py 1B5 https://huggingface.co/BlinkDL/rwkv-5-world/resolve/main/RWKV-5-World-1B5-v2-20231025-ctx4096.pth")
+    print("Example: python3 8080 ./api.py 1B5")
+    print("Example: python3 8080 ./api.py 1B5 https://huggingface.co/BlinkDL/rwkv-5-world/resolve/main/RWKV-5-World-1B5-v2-20231025-ctx4096.pth")
     exit()
 
 print(sys.argv)
 
-args.load_model = sys.argv[1] # python3 ./api.py ./model.pth
+args.load_model = sys.argv[2] # python3 ./api.py 8080 ./model.pth
+PORT = int(sys.argv[1])
 
 # if loadmodel not in 1B5, 7B, 3B throw error
 if args.load_model not in ["1B5", "7B", "3B"]:
@@ -42,8 +44,8 @@ if args.load_model not in ["1B5", "7B", "3B"]:
 # if not exists, download from huggingface
 if not os.path.exists(args.load_model+".pth"):
     # if specific url is passed in
-    if len(sys.argv) >= 2:
-        url = sys.argv[2]
+    if len(sys.argv) >= 3:
+        url = sys.argv[3]
     else:
         defaults = {
             "1B5": "https://huggingface.co/BlinkDL/rwkv-5-world/resolve/main/RWKV-5-World-1B5-v2-20231025-ctx4096.pth",
@@ -487,7 +489,7 @@ import requests as axios
 # ClusterRouterServers = ["http://localhost:3000"]
 # modelName = "RWKV_32_2560_32_17_QUInt8-pc-norr-ext.onnx"
 # modelPath = "./conversion/" + modelName
-PORT = 6474
+
 # doSeq = False
 # authentication = "testpassword"
 # currentUrl = "http://localhost"
