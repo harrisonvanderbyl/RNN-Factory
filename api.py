@@ -347,13 +347,20 @@ async def handleRWKV(conversation, model, pipeline):
     # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
     gc.collect()
     
-async def handleRWKVDirect(prompt, model, pipeline):
+async def handleRWKVDirect(prompt, model, pipeline, params):
     typicalSampling = True
     
     statee = None
     
+    # temperature = max(0.2, float(params['temperature']))
+    temperature = max(0.2, float(params.get('temperature', 0.8)))
+    top_p = float(params.get('top_p', 0.8))
+    presencePenalty = float(params.get('presencePenalty', 0.5))
+    countPenalty = float(params.get('countPenalty', 0.5))
+    
+    
     response = ""
-    async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
+    async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee, presencePenalty=presencePenalty, countPenalty=countPenalty, temperature=temperature, top_p=top_p):
         
         response += token
         yield token
@@ -442,7 +449,7 @@ async def handleCompletion(request):
         totalTokens = 0
         
         # run handleRwkv generator and output the result
-        async for token in handleRWKV(data['prompt'], model, pipeline):
+        async for token in handleRWKVDirect(data['prompt'], model, pipeline, data):
             await response.write((await buildOutputChunk(token)).encode())
             await asyncio.sleep(0.000001)
             totalTokens += 1   
