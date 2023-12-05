@@ -286,20 +286,47 @@ async def handleRWKVDirect(prompt, model, pipeline, params):
     
     
     response = ""
+
+    buffer = []
+
+    buffersize = 10
+
+
     async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee, presencePenalty=presencePenalty, countPenalty=countPenalty, temperature=temperature, top_p=top_p):
         
         response += token
+        buffer.append(token)
 
+        if buffer.__len__() < buffersize:
+            
+            await asyncio.sleep(0.000001)
+            continue
+
+
+        found = False
         for i in range(len(params.get("stop", []))):
             if params.get("stop", [])[i] in response:
-                return
+                found = True
+                
+        
 
-        yield token
-        
-        
+
+
+        yield buffer.pop(0)
+
+        if found:
+            break
         
         await asyncio.sleep(0.000001)
         
+
+    fullbuffer = "".join(buffer)
+
+    for i in range(len(params.get("stop", []))):
+        if params.get("stop", [])[i] in fullbuffer:
+            fullbuffer = fullbuffer.split(params.get("stop", [])[i])[0]
+
+    yield fullbuffer
 
     
     print ("## Prompt ##")
@@ -356,10 +383,6 @@ async def handleCompletion(request):
             await response.write((await buildOutputChunk(token)).encode())
             await asyncio.sleep(0.000001)
             totalTokens += 1
-            # if stop token is found, break
-            if ("stop" in data and token in data["stop"]):
-                print("## Stop token found ##")
-                return response
             # if max tokens is set, break at max tokens
             if("max_tokens" in data and totalTokens > data["max_tokens"] ):   
                 print("## Max tokens reached ##")
