@@ -268,85 +268,8 @@ async def evaluate(
             out_last = i + 1
 
 
-# time the evaluation
-# starttime = time.time()
-
-# tokens_generated = 0
-# run generator and output the result
-# print("## Prompt ##")
-# print(prompt)
-
-# print("## Normal Sampling ##")
-# for token in evaluate(prompt, model_type = model, typicalSampling=False):
-#     print(token, end='', flush=True)
-#     tokens_generated += 1
-
-# print('\n')
 
 
-# print("## Typical Sampling ##")
-# for token in evaluate(prompt, model_type = model, typicalSampling=True):
-#     print(token, end='', flush=True)
-#     tokens_generated += 1
-
-
-# print('\n')
-
-def removeTokens(text):
-    return text.replace("<|im_start|>", "").replace("<|im_end|>", "")
-
-# dictionary of tuples of key => (state, expiration)
-cachedStates = {}
-
-async def buildPrompt(conversation, model, pipeline):
-    
-    fullprompt = ""
-    # if cacheKey not in cachedStates.keys():
-    #     out, statea = model.forward([pipeline.encode(fullprompt)[-ctx_limit:]], None)
-    #     cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
-    
-    for m in conversation:
-        print("Role:",m['role'])
-        if m['role'] == 'user':
-            fullprompt += "### Input:\n" + removeTokens(m['content']).strip() + "\n"
-        elif m['role'] == 'assistant':
-            fullprompt += "### Response:\n" + removeTokens(m['content']).strip() + "\n"
-        elif m['role'] == 'system':
-            fullprompt += "### Instruction:\n" + removeTokens(m['content']).strip() + "\n"
-            
-    # hash current prompt to check for cached state
-    
-    # trim message
-    state = None
-            
-    prompt = fullprompt +"### Response:\n"
-    return prompt, state, fullprompt
-    
-
-async def handleRWKV(conversation, model, pipeline):
-    typicalSampling = True
-    
-    prompt, statee, fullprompt = await buildPrompt(conversation, model, pipeline)
-    
-    full_response = fullprompt
-    response = ""
-    async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
-        full_response += token
-        response += token
-        yield token
-        await asyncio.sleep(0.000001)
-
-    
-    print ("## Prompt ##")
-    print (prompt)
-    print ("## Response ##")
-    print (response)
-    
-    print ("##################")
-        
-    # cacheKey = full_response.strip() + "<|im_end|>\n"
-    # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
-    gc.collect()
     
 async def handleRWKVDirect(prompt, model, pipeline, params):
     typicalSampling = True
@@ -412,38 +335,6 @@ async def buildOutputChunk(token):
 
 
 
-async def handle(request):
-    model, pipeline, index = await getModel()
-    try:
-        response = web.StreamResponse(
-            status=200,
-            reason='OK',
-            headers={'Content-Type': 'text/plain'},
-        )
-        await response.prepare(request)
-        # get the request data (json)
-        data = await request.json()    
-        
-        startTime = time.time()
-        totalTokens = 0
-        
-        # run handleRwkv generator and output the result
-        async for token in handleRWKV(data['messages'], model, pipeline):
-            await response.write((await buildOutputChunk(token)).encode())
-            await asyncio.sleep(0.000001)
-            totalTokens += 1   
-
-        await response.write("data: [DONE]\n\n".encode())
-            
-        print(f"## Time taken: {time.time() - startTime} ##")
-        print(f"## Tokens generated: {totalTokens} ##")
-        print(f"## Tokens per second: {totalTokens / (time.time() - startTime)} ##")
-        
-        await response.write_eof()
-        return response
-    except OSError:
-        print("## Client disconnected ##")
-
 
 async def handleCompletion(request):
     model, pipeline, index = await getModel()
@@ -505,38 +396,10 @@ def getModelM(request):
 app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
 app.add_routes([
-    web.post('/v1/chat/completions', handle),
     web.post('/v1/completions', handleCompletion),
     web.get('/v1/models', getModelM),
 ])
 
-  
-import requests as axios 
-
-
-# ClusterRouterServers = ["http://localhost:3000"]
-# modelName = "RWKV_32_2560_32_17_QUInt8-pc-norr-ext.onnx"
-# modelPath = "./conversion/" + modelName
-
-# doSeq = False
-# authentication = "testpassword"
-# currentUrl = "http://localhost"
-# # random id generator
-# rand = random.Random()
-# # ID = "RWKV-" + str(rand.randint(0, 1000000000))
-# ID = "RWKV-test1"
-
-# response = axios.post(ClusterRouterServers[0] + "/register", json={
-#     "ID": ID + "-batch",
-#     "models": [modelName],
-#     "capacity": 1,
-#     "type": "FAST",
-#     "authentication": authentication,
-#     "port": PORT,
-#     "url": currentUrl,
-#     "endpoint": "/v1/chat/completions",
-#     })
-            
 threading.Thread(target=runModel).start()
 
 web.run_app(app, port=PORT)
