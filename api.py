@@ -218,11 +218,12 @@ async def evaluate(
     typicalSampling = True,
     state = None
 ):
-    args = PIPELINE_ARGS(temperature = max(0.2, float(temperature)), top_p = float(top_p),
-                     alpha_frequency = countPenalty,
-                     alpha_presence = presencePenalty,
-                     token_ban = [], # ban the generation of some tokens
-                     token_stop = [0, 65532]) # stop generation whenever you see any token here
+    args = PIPELINE_ARGS(temperature = max(0.2, float(temperature)),
+                    top_p = float(top_p),
+                    alpha_frequency = countPenalty,
+                    alpha_presence = presencePenalty,
+                    token_ban = [], # ban the generation of some tokens
+                    token_stop = [0, 65532]) # stop generation whenever you see any token here
 
     ctx = prompt
     
@@ -357,14 +358,25 @@ async def handleRWKVDirect(prompt, model, pipeline, params):
     top_p = float(params.get('top_p', 0.8))
     presencePenalty = float(params.get('presencePenalty', 0.5))
     countPenalty = float(params.get('countPenalty', 0.5))
+
+
     
     
     response = ""
     async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee, presencePenalty=presencePenalty, countPenalty=countPenalty, temperature=temperature, top_p=top_p):
         
         response += token
+
+        for i in range(len(params.get("stop", []))):
+            if params.get("stop", [])[i] in response:
+                return
+
         yield token
+        
+        
+        
         await asyncio.sleep(0.000001)
+        
 
     
     print ("## Prompt ##")
@@ -452,13 +464,22 @@ async def handleCompletion(request):
         async for token in handleRWKVDirect(data['prompt'], model, pipeline, data):
             await response.write((await buildOutputChunk(token)).encode())
             await asyncio.sleep(0.000001)
-            totalTokens += 1   
+            totalTokens += 1
+            # if stop token is found, break
+            if ("stop" in data and token in data["stop"]):
+                print("## Stop token found ##")
+                return response
+            # if max tokens is set, break at max tokens
+            if("max_tokens" in data and totalTokens > data["max_tokens"] ):   
+                print("## Max tokens reached ##")
+                return response
 
         await response.write("data: [DONE]\n\n".encode())
             
         print(f"## Time taken: {time.time() - startTime} ##")
         print(f"## Tokens generated: {totalTokens} ##")
         print(f"## Tokens per second: {totalTokens / (time.time() - startTime)} ##")
+
         
         await response.write_eof()
         return response
