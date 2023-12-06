@@ -14,9 +14,9 @@ ctx_limit = 8192
 
 torch.set_num_threads(60)
 
-from RNNFactory.src.samplers import sample_logits
+from src.samplers import sample_logits
 
-from RNNFactory.src.models import RWKV_v4, RWKV_v5, Experimental
+from src.models import RWKV_v4, RWKV_v5, Experimental
 args = types.SimpleNamespace()
 
 # get model file from command line
@@ -70,7 +70,7 @@ models = [
 pipelines = []
 
 from rwkv.utils import PIPELINE, PIPELINE_ARGS
-from RNNFactory.src.tokenizer import neox, world, racoon
+from src.tokenizer import neox, world, racoon
 
 lockedModels = []
 
