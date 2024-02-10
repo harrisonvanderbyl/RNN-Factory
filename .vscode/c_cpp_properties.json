@@ -3,13 +3,21 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src/models/rwkv.cuh/include/",
+                "/Users/Darok/Library/Python/3.9/lib/python/site-packages/torch/include/",
+                "/Users/Darok/Library/Python/3.9/lib/python/site-packages/torch/include/torch/csrc/api/include/",
+                "/Users/Darok/Library/Python/3.9/",
+                "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Headers"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerArgs": [
+                "\"-framework\", \"Python\""
+            ]
         }
     ],
     "version": 4

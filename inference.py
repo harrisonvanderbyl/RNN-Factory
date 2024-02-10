@@ -19,18 +19,18 @@ import torch
 
 from src.samplers import sample_logits
 
-from src.models import RWKV_v4, RWKV_v5, Experimental
+from src.models import RWKV_v4, RWKV_v5, Experimental, v5cpp
 from src.models.modules.Linear import Quantized
 args = types.SimpleNamespace()
 args.load_model = '7B.pth'
 
-model = RWKV_v5(args).cpu()
+model = v5cpp("/Users/Darok/rwkv.cuh/model.safetensors")
 
 from src.tokenizer import neox, world, racoon
 tokenizer = world
 
 context =   '''
-
+Hello, whats your name?
 '''
 
 doGreedy = False

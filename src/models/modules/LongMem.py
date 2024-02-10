@@ -136,7 +136,7 @@ class Long_Mem(StateModule):
         global wkv5_cuda
         if wkv5_cuda is None:
              wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/cpuonly.cpp"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"])
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-fPIC", "-H"])
                   
         rm = r.transpose(0,1).contiguous()
         km = k.transpose(0,1).contiguous()
@@ -161,11 +161,11 @@ class Long_Mem(StateModule):
                 # check if rocm
                 try:
                     wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={C//H}"])
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-H", "-fPIC"], extra_cuda_cflags=["-res-usage", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization", f"-D_N_={C//H}"])
                 except:
                     # compile on rocm devices
                     wkv5_cuda = load(name="wkv5", sources=["./src/models/modules/cuda/wkv5_op.cpp", f"./src/models/modules/cuda/wkv5_cuda.cu"],
-                            verbose=True, extra_cflags=["-O3", "-march=native", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-O3", f"-D_N_={C//H}"])
+                            verbose=True, extra_cflags=["-O3", "-march=native", "-H", "-fopenmp", "-fPIC"], extra_cuda_cflags=["-O3", f"-D_N_={C//H}"])
             x, stateout = self.RWKV_5.apply(B, T, C, H, statein, r, k, v, self.time_decay.float().exp().neg().exp().reshape(self.n_head,-1,1), self.time_faaaa.reshape(self.n_head, -1, 1))
         else:
             x, stateout = self.torchwise(B, T, C, H, statein.float(), r.view(B, T, H, -1).float(), k.view(B, T, H, -1).float(), v.view(B, T, H, -1).float(), self.time_decay.double().exp().neg().exp().reshape(self.n_head,-1).float(), self.time_faaaa.reshape(self.n_head, -1).float())
